@@ -1,73 +1,42 @@
 import os
-import time
-import sqlite3
+import hashlib
 import secrets
-
-import uvicorn
+import time
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-app = FastAPI()
+# --- КОНФИГУРАЦИЯ ---
+# Строку подключения берём из переменной окружения DATABASE_URL (её зададим в Render)
+DATABASE_URL = os.environ.get("DATABASE_URL")
+ADMIN_PASSWORD = "jager-admin-2026"
+APP_SALT = "jager_super_secret_salt_2026_change_this_in_prod"
 
-# Разрешаем запросы с любых адресов (сайт + Telegram WebApp)
+if not DATABASE_URL:
+    raise RuntimeError("❌ Переменная окружения DATABASE_URL не задана! Добавь её в настройках Render.")
+
+app = FastAPI(title="JAGER Casino API")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- НАСТРОЙКИ ---
-ADMIN_PASSWORD = "jager-admin-2026"   # ⚠️ смени на свой секретный!
-START_BALANCE = 5000
-DB_NAME = "jager_database.db"
-
-admin_sessions = {}  # токен админа -> время истечения
-
-def get_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS players (
-            name TEXT PRIMARY KEY,
-            password TEXT,
-            tg_id TEXT,
-            balance INTEGER DEFAULT 0,
-            games INTEGER DEFAULT 0,
-            wins INTEGER DEFAULT 0,
-            losses INTEGER DEFAULT 0,
-            total_win INTEGER DEFAULT 0,
-            total_lose INTEGER DEFAULT 0,
-            total_wagered INTEGER DEFAULT 0,
-            best_win INTEGER DEFAULT 0,
-            last_seen REAL DEFAULT 0,
-            activity TEXT DEFAULT 'В меню',
-            banned INTEGER DEFAULT 0,
-            pending_credits INTEGER DEFAULT 0
-        )
-    ''')
-    try:
-        cursor.execute("ALTER TABLE players ADD COLUMN pending_credits INTEGER DEFAULT 0")
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass
-    conn.close()
-
-init_db()
 
 # --- МОДЕЛИ ---
 class RegisterRequest(BaseModel):
     name: str
     password: str
     tg_id: Optional[str] = None
+
+class ActivityRequest(BaseModel):
+    token: str
+    activity: str
 
 class SyncRequest(BaseModel):
     token: str
@@ -80,165 +49,199 @@ class SyncRequest(BaseModel):
     total_wagered: int
     best_win: int
 
-class AdminAuth(BaseModel):
+class AdminGiveRequest(BaseModel):
     password: str
-
-class GiveRequest(BaseModel):
-    admin_token: str
     name: str
     amount: int
 
-class BanRequest(BaseModel):
-    admin_token: str
+class AdminBanRequest(BaseModel):
+    password: str
     name: str
     minutes: int
 
-def verify_admin(token: str) -> bool:
-    exp = admin_sessions.get(token)
-    if not exp:
-        return False
-    if exp < time.time():
-        admin_sessions.pop(token, None)
-        return False
-    return True
+# --- РАБОТА С БД ---
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return conn
 
-# --- API ИГРЫ ---
+def init_db():
+    """Создаёт таблицу users, если её ещё нет"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            tg_id TEXT UNIQUE,
+            name TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            token TEXT,
+            balance INTEGER DEFAULT 5000,
+            games INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            losses INTEGER DEFAULT 0,
+            total_win INTEGER DEFAULT 0,
+            total_lose INTEGER DEFAULT 0,
+            total_wagered INTEGER DEFAULT 0,
+            best_win INTEGER DEFAULT 0,
+            last_activity INTEGER DEFAULT 0,
+            activity_text TEXT DEFAULT 'В меню',
+            banned_until INTEGER DEFAULT 0
+        )
+    ''')
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256((password + APP_SALT).encode()).hexdigest()
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
+    print("✅ PostgreSQL подключена. Таблица users проверена/создана.")
+
+# --- ЭНДПОИНТЫ ---
+
 @app.post("/api/register")
-async def register(req: RegisterRequest):
+def register(req: RegisterRequest):
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players WHERE name = ?", (req.name,))
-    player = cursor.fetchone()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE name = %s", (req.name,))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Имя уже занято")
 
-    if player:
-        if player["password"] != req.password:
-            conn.close()
-            raise HTTPException(status_code=401, detail="Неверный пароль")
-        conn.close()
-        return {"token": player["name"], "name": player["name"],
-                "balance": player["balance"]}
-
-    cursor.execute('''
-        INSERT INTO players (name, password, tg_id, balance, last_seen)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (req.name, req.password, req.tg_id, START_BALANCE, time.time()))
-    conn.commit()
-    conn.close()
-    return {"token": req.name, "name": req.name, "balance": START_BALANCE}
-
-@app.post("/api/sync")
-async def sync(req: SyncRequest):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT pending_credits FROM players WHERE name = ?", (req.token,))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Игрок не найден")
-
-    pending = row["pending_credits"] or 0
-    new_balance = req.balance + pending
-
-    cursor.execute('''
-        UPDATE players SET
-            balance = ?,
-            games = MAX(games, ?), wins = MAX(wins, ?), losses = MAX(losses, ?),
-            total_win = MAX(total_win, ?), total_lose = MAX(total_lose, ?),
-            total_wagered = MAX(total_wagered, ?), best_win = MAX(best_win, ?),
-            pending_credits = 0, last_seen = ?
-        WHERE name = ?
-    ''', (new_balance, req.games, req.wins, req.losses,
-          req.total_win, req.total_lose, req.total_wagered,
-          req.best_win, time.time(), req.token))
-    conn.commit()
-    conn.close()
-    return {"status": "ok", "balance": new_balance, "credited": pending}
-
-@app.post("/api/activity")
-async def activity(req: dict):
-    token = req.get("token")
-    act = req.get("activity")
-    if token:
-        conn = get_db()
-        conn.execute("UPDATE players SET activity = ?, last_seen = ? WHERE name = ?",
-                     (act, time.time(), token))
-        conn.commit()
-        conn.close()
-    return {"status": "ok"}
-
-# --- АДМИН API ---
-@app.post("/api/admin/login")
-async def admin_login(req: AdminAuth):
-    if req.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Неверный пароль")
     token = secrets.token_urlsafe(32)
-    admin_sessions[token] = time.time() + 3600 * 24
-    return {"token": token}
-
-@app.get("/api/admin/players")
-async def get_players(admin_token: str, sort: str = "recent"):
-    if not verify_admin(admin_token):
-        raise HTTPException(status_code=403, detail="Не авторизован")
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players")
-    rows = cursor.fetchall()
-
-    plist, total_games, total_wagered = [], 0, 0
-    for row in rows:
-        is_online = (time.time() - row["last_seen"]) < 120
-        plist.append({
-            "name": row["name"], "balance": row["balance"],
-            "games": row["games"], "wins": row["wins"],
-            "online": is_online, "activity": row["activity"],
-            "banned": bool(row["banned"]),
-        })
-        total_games += row["games"]
-        total_wagered += row["total_wagered"]
-
-    if sort == "balance":
-        plist.sort(key=lambda x: x["balance"], reverse=True)
-    elif sort == "games":
-        plist.sort(key=lambda x: x["games"], reverse=True)
-    conn.close()
+    pwd_hash = hash_password(req.password)
+    cur.execute('''
+        INSERT INTO users (tg_id, name, password_hash, token, balance)
+        VALUES (%s, %s, %s, %s, 5000)
+        RETURNING *
+    ''', (req.tg_id, req.name, pwd_hash, token))
+    user = cur.fetchone()
+    conn.commit()
+    cur.close(); conn.close()
 
     return {
-        "players": plist,
-        "total_players": len(plist),
-        "online_now": sum(1 for p in plist if p["online"]),
-        "total_games": total_games,
-        "total_wagered": total_wagered,
+        "token": user["token"], "name": user["name"], "balance": user["balance"],
+        "games": user["games"], "wins": user["wins"], "losses": user["losses"],
+        "total_win": user["total_win"], "total_lose": user["total_lose"],
+        "total_wagered": user["total_wagered"], "best_win": user["best_win"]
+    }
+
+@app.post("/api/activity")
+def activity(req: ActivityRequest):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE users SET last_activity = %s, activity_text = %s WHERE token = %s",
+        (int(time.time()), req.activity, req.token)
+    )
+    conn.commit()
+    cur.close(); conn.close()
+    return {"status": "ok"}
+
+@app.post("/api/sync")
+def sync(req: SyncRequest):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE users SET
+            balance=%s, games=%s, wins=%s, losses=%s,
+            total_win=%s, total_lose=%s, total_wagered=%s, best_win=%s,
+            last_activity=%s
+        WHERE token=%s
+    ''', (req.balance, req.games, req.wins, req.losses, req.total_win,
+          req.total_lose, req.total_wagered, req.best_win, int(time.time()), req.token))
+    conn.commit()
+    cur.close(); conn.close()
+    return {"status": "ok"}
+
+@app.get("/api/admin/players")
+def get_players(password: str, sort: str = "recent"):
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Неверный пароль админа")
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(id) AS c, COALESCE(SUM(games),0) AS g, COALESCE(SUM(total_wagered),0) AS w FROM users")
+    totals = cur.fetchone()
+    total_players = totals["c"] or 0
+    total_games = totals["g"] or 0
+    total_wagered = totals["w"] or 0
+
+    now = int(time.time())
+    cur.execute("SELECT COUNT(id) AS c FROM users WHERE last_activity > %s", (now - 90,))
+    online_now = cur.fetchone()["c"] or 0
+
+    order_by = "last_activity DESC"
+    if sort == "balance": order_by = "balance DESC"
+    elif sort == "games": order_by = "games DESC"
+
+    cur.execute(f"SELECT name, balance, games, wins, last_activity, activity_text, banned_until FROM users ORDER BY {order_by} LIMIT 100")
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    players = []
+    for row in rows:
+        is_banned = row["banned_until"] > now
+        ban_note = ""
+        if is_banned:
+            if row["banned_until"] > now + 31536000:
+                ban_note = "Навсегда"
+            else:
+                ban_note = f"До {time.strftime('%d.%m %H:%M', time.localtime(row['banned_until']))}"
+        players.append({
+            "name": row["name"],
+            "online": row["last_activity"] > now - 90,
+            "activity": row["activity_text"],
+            "balance": row["balance"],
+            "games": row["games"],
+            "wins": row["wins"],
+            "banned": is_banned,
+            "ban_note": ban_note
+        })
+
+    return {
+        "total_players": total_players, "online_now": online_now,
+        "total_games": total_games, "total_wagered": total_wagered,
+        "players": players
     }
 
 @app.post("/api/admin/give")
-async def admin_give(req: GiveRequest):
-    if not verify_admin(req.admin_token):
-        raise HTTPException(status_code=403, detail="Не авторизован")
+def admin_give(req: AdminGiveRequest):
+    if req.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Неверный пароль админа")
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT pending_credits FROM players WHERE name = ?", (req.name,))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
+    cur = conn.cursor()
+    cur.execute("SELECT balance FROM users WHERE name = %s", (req.name,))
+    user = cur.fetchone()
+    if not user:
+        cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Игрок не найден")
-    new_pending = (row["pending_credits"] or 0) + req.amount
-    cursor.execute("UPDATE players SET pending_credits = ? WHERE name = ?",
-                   (new_pending, req.name))
+    new_balance = user["balance"] + req.amount
+    cur.execute("UPDATE users SET balance = %s WHERE name = %s", (new_balance, req.name))
     conn.commit()
-    conn.close()
-    return {"status": "ok", "new_pending": new_pending}
+    cur.close(); conn.close()
+    return {"status": "ok", "balance": new_balance}
 
 @app.post("/api/admin/ban")
-async def admin_ban(req: BanRequest):
-    if not verify_admin(req.admin_token):
-        raise HTTPException(status_code=403, detail="Не авторизован")
+def admin_ban(req: AdminBanRequest):
+    if req.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Неверный пароль админа")
     conn = get_db()
-    conn.execute("UPDATE players SET banned = 1 WHERE name = ?", (req.name,))
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE name = %s", (req.name,))
+    if not cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Игрок не найден")
+    ban_until = int(time.time()) + (req.minutes * 60) if req.minutes > 0 else 9999999999
+    cur.execute("UPDATE users SET banned_until = %s WHERE name = %s", (ban_until, req.name))
     conn.commit()
-    conn.close()
-    return {"status": "banned"}
+    cur.close(); conn.close()
+    return {"status": "ok"}
 
 if __name__ == "__main__":
-    # Render сам подставляет порт через переменную PORT
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
