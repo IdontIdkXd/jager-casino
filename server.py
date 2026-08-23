@@ -1,35 +1,31 @@
-from fastapi import FastAPI, HTTPException, Header
-from pydantic import BaseModel
-from typing import Optional
-import uvicorn
+import os
 import time
 import sqlite3
 import secrets
+
+import uvicorn
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
-# CORS — для прода замени "*" на точные домены фронтенда
+# Разрешаем запросы с любых адресов (сайт + Telegram WebApp)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "https://jagernayt.netlify.app",
-        "https://jager-casino.onrender.com",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Пароль хранится ТОЛЬКО на сервере, в JS его больше нет
-ADMIN_PASSWORD = "jager-admin-2026"
+# --- НАСТРОЙКИ ---
+ADMIN_PASSWORD = "jager-admin-2026"   # ⚠️ смени на свой секретный!
 START_BALANCE = 5000
 DB_NAME = "jager_database.db"
 
-# Активные админ-сессии: token -> expire_time (в памяти, на 24 часа)
-admin_sessions = {}
+admin_sessions = {}  # токен админа -> время истечения
 
 def get_db():
     conn = sqlite3.connect(DB_NAME)
@@ -58,7 +54,6 @@ def init_db():
             pending_credits INTEGER DEFAULT 0
         )
     ''')
-    # Миграция: если таблица уже есть, но без pending_credits — добавим
     try:
         cursor.execute("ALTER TABLE players ADD COLUMN pending_credits INTEGER DEFAULT 0")
         conn.commit()
@@ -98,19 +93,14 @@ class BanRequest(BaseModel):
     name: str
     minutes: int
 
-# --- ВСПОМОГАТЕЛЬНЫЕ ---
 def verify_admin(token: str) -> bool:
     exp = admin_sessions.get(token)
-    if not exp: return False
+    if not exp:
+        return False
     if exp < time.time():
         admin_sessions.pop(token, None)
         return False
     return True
-
-def get_player(conn, name):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM players WHERE name = ?", (name,))
-    return cursor.fetchone()
 
 # --- API ИГРЫ ---
 @app.post("/api/register")
@@ -125,12 +115,8 @@ async def register(req: RegisterRequest):
             conn.close()
             raise HTTPException(status_code=401, detail="Неверный пароль")
         conn.close()
-        return {
-            "token": player["name"],
-            "name": player["name"],
-            "balance": player["balance"],
-            "pending_credits": player["pending_credits"],
-        }
+        return {"token": player["name"], "name": player["name"],
+                "balance": player["balance"]}
 
     cursor.execute('''
         INSERT INTO players (name, password, tg_id, balance, last_seen)
@@ -138,16 +124,17 @@ async def register(req: RegisterRequest):
     ''', (req.name, req.password, req.tg_id, START_BALANCE, time.time()))
     conn.commit()
     conn.close()
-    return {"token": req.name, "name": req.name, "balance": START_BALANCE, "pending_credits": 0}
+    return {"token": req.name, "name": req.name, "balance": START_BALANCE}
 
 @app.post("/api/sync")
 async def sync(req: SyncRequest):
     conn = get_db()
     cursor = conn.cursor()
-    row = get_player(conn, req.token)
+    cursor.execute("SELECT pending_credits FROM players WHERE name = ?", (req.token,))
+    row = cursor.fetchone()
     if not row:
         conn.close()
-        raise HTTPException(404, "Игрок не найден")
+        raise HTTPException(status_code=404, detail="Игрок не найден")
 
     pending = row["pending_credits"] or 0
     new_balance = req.balance + pending
@@ -155,21 +142,14 @@ async def sync(req: SyncRequest):
     cursor.execute('''
         UPDATE players SET
             balance = ?,
-            games = MAX(games, ?),
-            wins = MAX(wins, ?),
-            losses = MAX(losses, ?),
-            total_win = MAX(total_win, ?),
-            total_lose = MAX(total_lose, ?),
-            total_wagered = MAX(total_wagered, ?),
-            best_win = MAX(best_win, ?),
-            pending_credits = 0,
-            last_seen = ?
+            games = MAX(games, ?), wins = MAX(wins, ?), losses = MAX(losses, ?),
+            total_win = MAX(total_win, ?), total_lose = MAX(total_lose, ?),
+            total_wagered = MAX(total_wagered, ?), best_win = MAX(best_win, ?),
+            pending_credits = 0, last_seen = ?
         WHERE name = ?
-    ''', (
-        new_balance, req.games, req.wins, req.losses,
-        req.total_win, req.total_lose, req.total_wagered,
-        req.best_win, time.time(), req.token
-    ))
+    ''', (new_balance, req.games, req.wins, req.losses,
+          req.total_win, req.total_lose, req.total_wagered,
+          req.best_win, time.time(), req.token))
     conn.commit()
     conn.close()
     return {"status": "ok", "balance": new_balance, "credited": pending}
@@ -189,38 +169,29 @@ async def activity(req: dict):
 # --- АДМИН API ---
 @app.post("/api/admin/login")
 async def admin_login(req: AdminAuth):
-    # Простая защита от брутфорса: максимум 10 попыток в минуту по IP
-    # (в проде лучше подключить slowapi или nginx rate limit)
     if req.password != ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Неверный пароль")
     token = secrets.token_urlsafe(32)
-    admin_sessions[token] = time.time() + 3600 * 24  # токен на 24 часа
+    admin_sessions[token] = time.time() + 3600 * 24
     return {"token": token}
 
 @app.get("/api/admin/players")
 async def get_players(admin_token: str, sort: str = "recent"):
     if not verify_admin(admin_token):
         raise HTTPException(status_code=403, detail="Не авторизован")
-
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM players")
     rows = cursor.fetchall()
 
-    plist = []
-    total_games = 0
-    total_wagered = 0
+    plist, total_games, total_wagered = [], 0, 0
     for row in rows:
         is_online = (time.time() - row["last_seen"]) < 120
         plist.append({
-            "name": row["name"],
-            "balance": row["balance"],
-            "games": row["games"],
-            "wins": row["wins"],
-            "online": is_online,
-            "activity": row["activity"],
+            "name": row["name"], "balance": row["balance"],
+            "games": row["games"], "wins": row["wins"],
+            "online": is_online, "activity": row["activity"],
             "banned": bool(row["banned"]),
-            "pending": row["pending_credits"] or 0,
         })
         total_games += row["games"]
         total_wagered += row["total_wagered"]
@@ -229,8 +200,8 @@ async def get_players(admin_token: str, sort: str = "recent"):
         plist.sort(key=lambda x: x["balance"], reverse=True)
     elif sort == "games":
         plist.sort(key=lambda x: x["games"], reverse=True)
-
     conn.close()
+
     return {
         "players": plist,
         "total_players": len(plist),
@@ -243,21 +214,19 @@ async def get_players(admin_token: str, sort: str = "recent"):
 async def admin_give(req: GiveRequest):
     if not verify_admin(req.admin_token):
         raise HTTPException(status_code=403, detail="Не авторизован")
-
     conn = get_db()
     cursor = conn.cursor()
-    row = get_player(conn, req.name)
+    cursor.execute("SELECT pending_credits FROM players WHERE name = ?", (req.name,))
+    row = cursor.fetchone()
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Игрок не найден")
-
     new_pending = (row["pending_credits"] or 0) + req.amount
     cursor.execute("UPDATE players SET pending_credits = ? WHERE name = ?",
                    (new_pending, req.name))
     conn.commit()
     conn.close()
-    return {"status": "ok", "new_pending": new_pending,
-            "note": "Игрок получит начисление при следующей синхронизации"}
+    return {"status": "ok", "new_pending": new_pending}
 
 @app.post("/api/admin/ban")
 async def admin_ban(req: BanRequest):
@@ -270,5 +239,6 @@ async def admin_ban(req: BanRequest):
     return {"status": "banned"}
 
 if __name__ == "__main__":
-    print("🚀 Сервер запускается...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Render сам подставляет порт через переменную PORT
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
