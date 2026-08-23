@@ -12,9 +12,7 @@
   }
   const userKey = tgUser && tgUser.id ? ('jager_profile_' + tgUser.id) : 'jager_profile_guest';
 
-  // ==================== BACKEND API ====================
   const API_BASE_URL = 'https://jager-casino.onrender.com';
-
   const SESSION_KEY = 'jager_session_v1';
   const ADMIN_TOKEN_KEY = 'jager_admin_token_v1';
   const loadSession = ()=>{ try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){return null;} };
@@ -30,7 +28,6 @@
     if(!res.ok) throw new Error(data.detail || 'Ошибка регистрации');
     return data;
   }
-
   async function apiAdminLogin(password){
     const res = await fetch(API_BASE_URL + '/api/admin/login', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -40,7 +37,6 @@
     if(!res.ok) throw new Error(data.detail || 'Неверный пароль');
     return data.token;
   }
-
   function apiActivity(text){
     if(!API_BASE_URL || !session) return;
     fetch(API_BASE_URL + '/api/activity', {
@@ -48,8 +44,6 @@
       body: JSON.stringify({token: session.token, activity: text})
     }).catch(()=>{});
   }
-
-  // Ключевая функция: синхронизация с сервером + получение начислений админа
   async function apiSync(){
     if(!API_BASE_URL || !session) return;
     try{
@@ -64,7 +58,6 @@
       });
       const data = await res.json().catch(()=>({}));
       if(res.ok && typeof data.balance === 'number'){
-        // Если сервер говорит что баланс больше — значит пришли начисления админа
         if(data.balance > balance){
           balance = data.balance;
           renderBalance();
@@ -82,13 +75,19 @@
 
   function toast(msg){
     const t = $('toast');
+    if(!t) return;
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toast._h);
     toast._h = setTimeout(()=>t.classList.remove('show'), 2400);
   }
 
-  function renderBalance(){ $('balanceDisplay').textContent = fmt(balance); }
+  function renderBalance(){
+    const el = $('balanceDisplay');
+    if (el) el.textContent = fmt(balance);
+    const topBadge = $('topRankBadge');
+    if (topBadge) topBadge.textContent = currentRank().emoji + ' ' + currentRank().name;
+  }
 
   function defaultStats(){
     return {games:0, wins:0, losses:0, totalWin:0, totalLose:0, bestWin:0, streak:0, totalEarned:0, totalWagered:0, lastGameAt:0};
@@ -106,7 +105,6 @@
     const step = i+1;
     return {step, games:step*10, coins:step*5000, reward:step*1500};
   });
-
   const RANKS = [
     {name:'Бронза', emoji:'🥉', min:0},
     {name:'Серебро', emoji:'🥈', min:100000},
@@ -151,74 +149,839 @@
     }catch(e){ balance = START_BALANCE; }
     renderBalance();
   }
-
   function saveProfile(){
-    try{
-      localStorage.setItem(userKey, JSON.stringify({
-        balance, stats, quests, refData, updated:Date.now()
-      }));
-    }catch(e){}
+    try{ localStorage.setItem(userKey, JSON.stringify({balance, stats, quests, refData, updated:Date.now()})); }catch(e){}
   }
-
   function changeBalance(delta){
     balance += delta;
     if(balance < 0) balance = 0;
     renderBalance();
     saveProfile();
   }
-
   loadProfile();
 
-  // ==================== РЕГИСТРАЦИЯ ====================
+  // РЕГИСТРАЦИЯ
   function maybeShowRegistration(){
     if(!API_BASE_URL) return;
     if(session && session.token) return;
-    $('regOverlay').classList.add('show');
+    const ov = $('regOverlay'); if(ov) ov.classList.add('show');
   }
-  $('regSubmitBtn').addEventListener('click', async ()=>{
-    const name = $('regNameInput').value.trim();
-    const password = $('regPasswordInput').value;
-    $('regError').textContent = '';
-    if(name.length < 2){ $('regError').textContent = 'Введи имя (от 2 символов)'; return; }
-    if(password.length < 4){ $('regError').textContent = 'Пароль от 4 символов'; return; }
-    try{
-      const data = await apiRegister(name, password);
-      session = {token: data.token, name: data.name};
-      saveSession(session);
-      balance = data.balance;
-      stats = Object.assign(defaultStats(), {
-        games:data.games||0, wins:data.wins||0, losses:data.losses||0,
-        totalWin:data.total_win||0, totalLose:data.total_lose||0,
-        totalWagered:data.total_wagered||0, bestWin:data.best_win||0
-      });
-      renderBalance(); renderProfile(); saveProfile();
-      $('regOverlay').classList.remove('show');
-      toast('Добро пожаловать, '+data.name+'!');
-      apiActivity('В меню');
-    }catch(e){ $('regError').textContent = e.message || 'Не удалось войти'; }
-  });
+  const regBtn = $('regSubmitBtn');
+  if(regBtn){
+    regBtn.addEventListener('click', async ()=>{
+      const name = $('regNameInput').value.trim();
+      const password = $('regPasswordInput').value;
+      $('regError').textContent = '';
+      if(name.length < 2){ $('regError').textContent = 'Введи имя (от 2 символов)'; return; }
+      if(password.length < 4){ $('regError').textContent = 'Пароль от 4 символов'; return; }
+      try{
+        const data = await apiRegister(name, password);
+        session = {token: data.token, name: data.name};
+        saveSession(session);
+        balance = data.balance;
+        stats = Object.assign(defaultStats(), {
+          games:data.games||0, wins:data.wins||0, losses:data.losses||0,
+          totalWin:data.total_win||0, totalLose:data.total_lose||0,
+          totalWagered:data.total_wagered||0, bestWin:data.best_win||0
+        });
+        renderBalance(); renderProfile(); saveProfile();
+        $('regOverlay').classList.remove('show');
+        toast('Добро пожаловать, '+data.name+'!');
+        apiActivity('В меню');
+      }catch(e){ $('regError').textContent = e.message || 'Не удалось войти'; }
+    });
+  }
   maybeShowRegistration();
 
-  // Фоновая синхронизация каждые 15 секунд — это нужно для получения начислений админа
-  if(API_BASE_URL){
-    setInterval(()=>{ if(session) apiSync(); }, 15000);
+  if(API_BASE_URL){ setInterval(()=>{ if(session) apiSync(); }, 15000); }
+
+  function handleReferralStartParam(){
+    if(!tg || !tg.initDataUnsafe) return;
+    const startParam = tg.initDataUnsafe.start_param || '';
+    if(!startParam || refData.processedStartParam) return;
+    if(startParam.startsWith('ref_')){
+      const code = startParam.slice(4);
+      if(code && code !== refData.code){
+        refData.referredBy = code;
+        refData.processedStartParam = true;
+        saveProfile();
+      }
+    }
+  }
+  handleReferralStartParam();
+
+  if(tgUser){
+    if($('profileUsername')) $('profileUsername').textContent = tgUser.username ? ('@'+tgUser.username) : (tgUser.first_name || 'Игрок');
+    if($('profileTgId')) $('profileTgId').textContent = 'ID: ' + tgUser.id;
   }
 
-  // ... (оставь без изменений: handleReferralStartParam, tgUser рендер, menuBtn логика,
-  //       навигация по экранам, quick-bet, getBet, и вся логика игр MINES/ROULETTE/UPGRADE/ROCKET/LADDER/PVP/QUESTS/SHOP/REFERRALS/PROFILE)
+  const closeBtn = $('closeBtn');
+  if(closeBtn){
+    closeBtn.addEventListener('click', ()=>{
+      if(tg){ tg.close(); } else { toast('Закрытие доступно внутри Telegram'); }
+    });
+  }
+  let menuTapCount = 0, menuTapTimer = null;
+  const menuBtn = $('menuBtn');
+  if(menuBtn){
+    menuBtn.addEventListener('click', ()=>{
+      menuTapCount++;
+      clearTimeout(menuTapTimer);
+      menuTapTimer = setTimeout(()=>{ menuTapCount = 0; }, 1500);
+      if(menuTapCount >= 5){
+        menuTapCount = 0;
+        openAdminLogin();
+        return;
+      }
+      toast('JAGER · игровая валюта без реальной стоимости');
+    });
+  }
 
-  // ==================== ADMIN PANEL (НОВАЯ БЕЗОПАСНАЯ ВЕРСИЯ) ====================
-  // ПАРОЛЯ В КОДЕ БОЛЬШЕ НЕТ! Он вводится вручную при логине.
+  const screens = document.querySelectorAll('.screen');
+  const navItems = document.querySelectorAll('.nav-item');
+  const tabScreenMap = {pvp:'pvp', solo:'solo', giveaways:'giveaways', shop:'shop', referrals:'referrals', profile:'profile'};
+  const SCREEN_ACTIVITY_LABELS = {
+    solo:'В меню', mines:'Играет в Мины', roulette:'Играет в Рулетку', upgrade:'Играет в Апгрейд',
+    rocket:'Играет в Ракету', ladder:'Играет в Лесенку', pvp:'В PvP Battle',
+    giveaways:'Смотрит задания', shop:'В магазине', referrals:'В рефералах', profile:'В профиле'
+  };
+  function showScreen(id){
+    screens.forEach(s=>s.classList.remove('active'));
+    const scr = $('screen-'+id);
+    if(scr) scr.classList.add('active');
+    apiActivity(SCREEN_ACTIVITY_LABELS[id] || ('Экран: '+id));
+  }
+  navItems.forEach(item=>{
+    item.addEventListener('click', ()=>{
+      navItems.forEach(n=>n.classList.remove('active'));
+      item.classList.add('active');
+      showScreen(tabScreenMap[item.dataset.tab] || 'solo');
+    });
+  });
+  document.querySelectorAll('.game-card').forEach(card=>{
+    card.addEventListener('click', ()=> showScreen(card.dataset.game));
+  });
+  document.querySelectorAll('[data-back]').forEach(btn=>{
+    btn.addEventListener('click', ()=> showScreen('solo'));
+  });
+
+  document.querySelectorAll('[data-half]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const inp = $(b.dataset.half);
+      if(!inp) return;
+      inp.value = Math.max(1, Math.floor(parseFloat(inp.value||1)/2));
+      inp.dispatchEvent(new Event('input'));
+    });
+  });
+  document.querySelectorAll('[data-double]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const inp = $(b.dataset.double);
+      if(!inp) return;
+      inp.value = Math.max(1, Math.floor(parseFloat(inp.value||1)*2));
+      inp.dispatchEvent(new Event('input'));
+    });
+  });
+  function getBet(id){
+    const v = Math.floor(parseFloat($(id).value));
+    return (isNaN(v) || v < 1) ? 0 : v;
+  }
+
+  // ========== MINES ==========
+  const MINES_TOTAL = 25;
+  let minesState = null;
+  function minesMultiplier(mines, revealed){
+    let mult = 1; let safe = MINES_TOTAL - mines;
+    for(let i=0;i<revealed;i++){ mult *= (MINES_TOTAL - i) / (safe - i); }
+    return mult * 0.95;
+  }
+  function buildMinesGrid(){
+    const grid = $('minesGrid'); if(!grid) return;
+    grid.innerHTML = '';
+    for(let i=0;i<MINES_TOTAL;i++){
+      const cell = document.createElement('div');
+      cell.className = 'mine-cell'; cell.dataset.idx = i;
+      cell.addEventListener('click', onMineCellClick);
+      grid.appendChild(cell);
+    }
+  }
+  buildMinesGrid();
+  const minesMinus = $('minesMinus'), minesPlus = $('minesPlus'), minesCountEl = $('minesCount');
+  if(minesMinus) minesMinus.addEventListener('click', ()=>{
+    let n = parseInt(minesCountEl.textContent); if(n>1) minesCountEl.textContent = n-1;
+  });
+  if(minesPlus) minesPlus.addEventListener('click', ()=>{
+    let n = parseInt(minesCountEl.textContent); if(n<24) minesCountEl.textContent = n+1;
+  });
+  const minesStartBtn = $('minesStartBtn'), minesCashoutBtn = $('minesCashoutBtn');
+  if(minesStartBtn) minesStartBtn.addEventListener('click', ()=>{
+    const bet = getBet('minesBet');
+    if(bet <= 0){ toast('Введите ставку'); return; }
+    if(bet > balance){ toast('Недостаточно фишек'); return; }
+    const minesCount = parseInt(minesCountEl.textContent);
+    changeBalance(-bet);
+    const minePositions = new Set();
+    while(minePositions.size < minesCount) minePositions.add(Math.floor(Math.random()*MINES_TOTAL));
+    minesState = {bet, minesCount, minePositions, revealed:0, active:true};
+    document.querySelectorAll('.mine-cell').forEach(c=>{ c.className='mine-cell'; c.textContent=''; });
+    const res = $('minesResult'); if(res){ res.className='result-msg'; res.textContent=''; }
+    const md = $('minesMultDisplay'); if(md) md.textContent='x1.00';
+    minesStartBtn.style.display='none';
+    minesCashoutBtn.textContent='Забрать выигрыш';
+    minesCashoutBtn.style.display='block';
+  });
+  function onMineCellClick(e){
+    if(!minesState || !minesState.active) return;
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    const cell = e.currentTarget;
+    if(cell.classList.contains('revealed-safe') || cell.classList.contains('revealed-mine')) return;
+    if(minesState.minePositions.has(idx)){
+      cell.classList.add('revealed-mine'); cell.textContent='💥';
+      minesState.active = false; revealAllMines();
+      const res = $('minesResult');
+      if(res){ res.className='result-msg lose'; res.textContent='Взрыв! Потеряно ' + fmt(minesState.bet) + ' фишек'; }
+      recordRoundResult(minesState.bet, 0);
+      endMinesRound();
+    } else {
+      minesState.revealed++;
+      cell.classList.add('revealed-safe'); cell.textContent='💎';
+      const mult = minesMultiplier(minesState.minesCount, minesState.revealed);
+      const md = $('minesMultDisplay'); if(md) md.textContent='x'+mult.toFixed(2);
+      minesCashoutBtn.textContent='Забрать ' + fmt(minesState.bet*mult) + ' фишек';
+      if(minesState.revealed === MINES_TOTAL - minesState.minesCount) cashoutMines();
+    }
+  }
+  function revealAllMines(){
+    document.querySelectorAll('.mine-cell').forEach(c=>{
+      const idx = parseInt(c.dataset.idx);
+      c.classList.add('locked');
+      if(minesState.minePositions.has(idx) && !c.classList.contains('revealed-mine')){
+        c.classList.add('revealed-mine'); c.textContent='💣';
+      }
+    });
+  }
+  function cashoutMines(){
+    if(!minesState || !minesState.active) return;
+    const mult = minesMultiplier(minesState.minesCount, minesState.revealed);
+    const win = minesState.bet * mult;
+    minesState.active = false;
+    changeBalance(win);
+    const res = $('minesResult');
+    if(res){
+      res.className='result-msg win';
+      res.textContent = minesState.revealed>0 ? ('Выигрыш ' + fmt(win) + ' фишек (x' + mult.toFixed(2) + ')') : 'Ставка возвращена';
+    }
+    recordRoundResult(minesState.bet, win);
+    revealAllMines();
+    endMinesRound();
+  }
+  if(minesCashoutBtn) minesCashoutBtn.addEventListener('click', ()=>{
+    if(!minesState || !minesState.active) return;
+    if(minesState.revealed === 0){ toast('Откройте хотя бы одну клетку'); return; }
+    cashoutMines();
+  });
+  function endMinesRound(){
+    minesCashoutBtn.style.display='none';
+    minesStartBtn.style.display='block';
+    minesStartBtn.textContent='Начать игру';
+  }
+
+  // ========== ROULETTE ==========
+  const wheelSegments = [
+    {mult:0, color:'#241a45', weight:76},
+    {mult:1.2, color:'#3d2678', weight:25},
+    {mult:1.5, color:'#6a35b0', weight:18},
+    {mult:2, color:'#9257ff', weight:14},
+    {mult:3, color:'#c231d9', weight:8},
+    {mult:5, color:'#f5479c', weight:4},
+    {mult:10, color:'#ffc94a', weight:1},
+  ];
+  const totalWeight = wheelSegments.reduce((s,x)=>s+x.weight,0);
+  function buildWheel(){
+    let acc = 0; const gradParts = [];
+    wheelSegments.forEach(seg=>{
+      const startDeg = acc/totalWeight*360;
+      acc += seg.weight;
+      const endDeg = acc/totalWeight*360;
+      gradParts.push(seg.color+' '+startDeg.toFixed(2)+'deg '+endDeg.toFixed(2)+'deg');
+    });
+    const wh = $('wheel'); if(wh) wh.style.background = 'conic-gradient(' + gradParts.join(',') + ')';
+    const legend = $('wheelLegend'); if(!legend) return;
+    legend.innerHTML = '';
+    wheelSegments.forEach(seg=>{
+      const pill = document.createElement('div');
+      pill.className = 'mult-pill';
+      pill.style.color = seg.color === '#241a45' ? 'var(--muted)' : seg.color;
+      pill.textContent = 'x'+seg.mult;
+      legend.appendChild(pill);
+    });
+  }
+  buildWheel();
+  let wheelRotation = 0, spinning = false;
+  const rouletteSpinBtn = $('rouletteSpinBtn');
+  if(rouletteSpinBtn) rouletteSpinBtn.addEventListener('click', ()=>{
+    if(spinning) return;
+    const bet = getBet('rouletteBet');
+    if(bet <= 0){ toast('Введите ставку'); return; }
+    if(bet > balance){ toast('Недостаточно фишек'); return; }
+    changeBalance(-bet);
+    spinning = true;
+    const res = $('rouletteResult'); if(res){ res.className='result-msg'; res.textContent=''; }
+    rouletteSpinBtn.disabled = true;
+    const wc = $('wheelCenter'); if(wc) wc.textContent='...';
+    let r = Math.random()*totalWeight;
+    let acc = 0, chosen = wheelSegments[0], chosenIdx = 0;
+    for(let i=0;i<wheelSegments.length;i++){
+      acc += wheelSegments[i].weight;
+      if(r <= acc){ chosen = wheelSegments[i]; chosenIdx = i; break; }
+    }
+    const startW = wheelSegments.slice(0,chosenIdx).reduce((s,x)=>s+x.weight,0);
+    const segStartDeg = startW/totalWeight*360;
+    const segEndDeg = (startW+chosen.weight)/totalWeight*360;
+    const targetDeg = segStartDeg + (segEndDeg-segStartDeg)*0.5;
+    const spins = 5 + Math.floor(Math.random()*2);
+    const finalRotation = wheelRotation - (wheelRotation % 360) + spins*360 + (360 - targetDeg);
+    wheelRotation = finalRotation;
+    const wh = $('wheel'); if(wh) wh.style.transform = 'rotate('+finalRotation+'deg)';
+    setTimeout(()=>{
+      spinning = false;
+      rouletteSpinBtn.disabled = false;
+      if(wc) wc.textContent = 'x'+chosen.mult;
+      const win = bet * chosen.mult;
+      if(chosen.mult > 0){
+        changeBalance(win);
+        if(res){ res.className='result-msg win'; res.textContent='Выпало x'+chosen.mult+' — выигрыш '+fmt(win)+' фишек'; }
+        recordRoundResult(bet, win);
+      } else {
+        if(res){ res.className='result-msg lose'; res.textContent='Выпало x0 — ставка сгорела'; }
+        recordRoundResult(bet, 0);
+      }
+    }, 4300);
+  });
+
+  // ========== UPGRADE ==========
+  let upgradeNeedleRotation = 0;
+  function updateUpgradeUI(){
+    const bet = getBet('upgradeBet') || 0;
+    const multRaw = parseInt($('upgradeMultSlider').value);
+    const mult = multRaw/10;
+    const lbl = $('upgradeMultLabel'); if(lbl) lbl.textContent = 'x'+mult.toFixed(2);
+    const chance = Math.min(95, Math.max(1, 95/mult));
+    const cl = $('upgradeChanceLabel'); if(cl) cl.textContent = chance.toFixed(1)+'%';
+    const f = $('upgradeFromVal'); if(f) f.textContent = '◆'+fmt(bet);
+    const t = $('upgradeToVal'); if(t) t.textContent = '◆'+fmt(bet*mult);
+    const chanceDeg = chance/100*360;
+    const g = $('upgradeGauge'); if(g) g.style.background = 'conic-gradient(var(--green) 0deg '+chanceDeg.toFixed(2)+'deg, var(--red) '+chanceDeg.toFixed(2)+'deg 360deg)';
+    const gc = $('upgradeGaugeCenter'); if(gc) gc.textContent = chance.toFixed(0)+'%';
+  }
+  const upgradeBetInp = $('upgradeBet'), upgradeSlider = $('upgradeMultSlider');
+  if(upgradeBetInp) upgradeBetInp.addEventListener('input', updateUpgradeUI);
+  if(upgradeSlider) upgradeSlider.addEventListener('input', updateUpgradeUI);
+  if(upgradeSlider) updateUpgradeUI();
+  const upgradeGoBtn = $('upgradeGoBtn');
+  if(upgradeGoBtn) upgradeGoBtn.addEventListener('click', ()=>{
+    const bet = getBet('upgradeBet');
+    if(bet <= 0){ toast('Введите ставку'); return; }
+    if(bet > balance){ toast('Недостаточно фишек'); return; }
+    const multRaw = parseInt($('upgradeMultSlider').value);
+    const mult = multRaw/10;
+    const chance = Math.min(95, Math.max(1, 95/mult));
+    const chanceDeg = chance/100*360;
+    const roll = Math.random()*100;
+    const success = roll <= chance;
+    const targetDeg = success ? chanceDeg*0.5 : chanceDeg + (360-chanceDeg)*0.5;
+    changeBalance(-bet);
+    upgradeGoBtn.disabled = true;
+    const res = $('upgradeResult'); if(res){ res.className='result-msg'; res.textContent=''; }
+    const spins = 3 + Math.floor(Math.random()*2);
+    upgradeNeedleRotation = upgradeNeedleRotation - (upgradeNeedleRotation % 360) + spins*360 + targetDeg;
+    const nd = $('upgradeNeedle'); if(nd) nd.style.transform = 'translate(-50%,-100%) rotate('+upgradeNeedleRotation+'deg)';
+    setTimeout(()=>{
+      upgradeGoBtn.disabled = false;
+      if(success){
+        const win = bet*mult;
+        changeBalance(win);
+        if(res){ res.className='result-msg win'; res.textContent='Успех! Получено '+fmt(win)+' фишек'; }
+        recordRoundResult(bet, win);
+      } else {
+        if(res){ res.className='result-msg lose'; res.textContent='Неудача — потеряно '+fmt(bet)+' фишек'; }
+        recordRoundResult(bet, 0);
+      }
+    }, 2700);
+  });
+
+  // ========== ROCKET ==========
+  let rocketInterval = null, rocketCountdownInterval = null;
+  let rocketMult = 1, rocketCrashAt = 1;
+  let rocketActive = false, rocketBetLocked = 0, rocketPending = false;
+  function randomCrashPoint(){
+    const RTP = 0.95;
+    const r = Math.random();
+    const raw = RTP / (1 - r);
+    return Math.max(1.01, Math.min(raw, 50));
+  }
+  function resetRocketVisual(){
+    const em = $('rocketEmoji'); if(em){ em.style.left='8%'; em.style.bottom='14px'; em.textContent=''; }
+    const md = $('rocketMultDisplay'); if(md){ md.textContent='1.00x'; md.style.color='var(--text)'; }
+    const tr = $('rocketTrail'); if(tr) tr.style.height='0%';
+    const pa = $('rocketPath'); if(pa) pa.setAttribute('points','0,220');
+    const cd = $('rocketCountdown'); if(cd) cd.classList.remove('show');
+  }
+  function finishRocketLoss(){
+    rocketActive = false; rocketPending = false;
+    clearInterval(rocketInterval); clearInterval(rocketCountdownInterval);
+    const md = $('rocketMultDisplay'); if(md){ md.textContent = rocketCrashAt.toFixed(2)+'x'; md.style.color = 'var(--red)'; }
+    const em = $('rocketEmoji'); if(em){ em.style.left = '92%'; em.textContent = '💥'; }
+    const st = $('rocketStatus'); if(st) st.textContent = 'Взрыв на '+rocketCrashAt.toFixed(2)+'x';
+    const res = $('rocketResult'); if(res){ res.className='result-msg lose'; res.textContent='Не успели забрать — потеряно '+fmt(rocketBetLocked)+' фишек'; }
+    recordRoundResult(rocketBetLocked, 0);
+    const cb = $('rocketCashoutBtn'); if(cb) cb.style.display='none';
+    const lb = $('rocketLaunchBtn'); if(lb){ lb.style.display='block'; lb.textContent='Запустить снова'; }
+    setTimeout(resetRocketVisual, 1400);
+  }
+  function startRocketFlight(){
+    rocketPending = false; rocketActive = true;
+    rocketCrashAt = randomCrashPoint();
+    const cd = $('rocketCountdown'); if(cd) cd.classList.remove('show');
+    const st = $('rocketStatus'); if(st) st.textContent = 'В полёте...';
+    const cb = $('rocketCashoutBtn'); if(cb){ cb.style.display='block'; cb.disabled=false; }
+    const start = Date.now(); const pathPoints = ['0,220'];
+    rocketInterval = setInterval(()=>{
+      const t = (Date.now()-start)/1000;
+      rocketMult = 1 + Math.pow(t, 1.55)*0.22;
+      if(rocketMult >= rocketCrashAt){ finishRocketLoss(); return; }
+      const md = $('rocketMultDisplay'); if(md){ md.textContent = rocketMult.toFixed(2)+'x'; md.style.color = rocketMult >= 2 ? 'var(--gold)' : 'var(--text)'; }
+      const cb = $('rocketCashoutBtn'); if(cb) cb.textContent = 'Забрать '+fmt(rocketBetLocked*rocketMult)+' фишек';
+      const heightPct = Math.min(90, (rocketMult-1)*18);
+      const widthPct = Math.min(88, 8 + t*14);
+      const em = $('rocketEmoji'); if(em){ em.style.left = widthPct + '%'; em.style.bottom = (14+heightPct*2)+'px'; }
+      const tr = $('rocketTrail'); if(tr) tr.style.height = heightPct+'%';
+      const px = (widthPct/100)*300; const py = 220 - (heightPct/100)*220;
+      pathPoints.push(px.toFixed(1)+','+py.toFixed(1));
+      if(pathPoints.length > 60) pathPoints.shift();
+      const pa = $('rocketPath'); if(pa){ pa.setAttribute('points', pathPoints.join(' ')); pa.style.stroke = (rocketMult >= 2 ? '#ffc94a' : '#33c7ff'); }
+    }, 60);
+  }
+  const rocketLaunchBtn = $('rocketLaunchBtn');
+  if(rocketLaunchBtn) rocketLaunchBtn.addEventListener('click', ()=>{
+    if(rocketActive || rocketPending) return;
+    const bet = getBet('rocketBet');
+    if(bet <= 0){ toast('Введите ставку'); return; }
+    if(bet > balance){ toast('Недостаточно фишек'); return; }
+    changeBalance(-bet);
+    rocketBetLocked = bet; rocketMult = 1; rocketPending = true; rocketActive = false;
+    const res = $('rocketResult'); if(res){ res.className='result-msg'; res.textContent=''; }
+    rocketLaunchBtn.style.display='none';
+    const cb = $('rocketCashoutBtn'); if(cb) cb.style.display='none';
+    const st = $('rocketStatus'); if(st) st.textContent = 'Ставка принята. Подготовка старта...';
+    const cd = $('rocketCountdown'); if(cd) cd.classList.add('show');
+    let seconds = 30;
+    if(cd) cd.textContent = '🚀 Старт через '+seconds+' сек';
+    clearInterval(rocketCountdownInterval);
+    rocketCountdownInterval = setInterval(()=>{
+      seconds--;
+      if(cd) cd.textContent = '🚀 Старт через '+seconds+' сек';
+      if(seconds <= 0){ clearInterval(rocketCountdownInterval); startRocketFlight(); }
+    },1000);
+  });
+  const rocketCashoutBtn = $('rocketCashoutBtn');
+  if(rocketCashoutBtn) rocketCashoutBtn.addEventListener('click', ()=>{
+    if(!rocketActive) return;
+    clearInterval(rocketInterval); rocketActive = false;
+    const win = rocketBetLocked*rocketMult;
+    changeBalance(win);
+    const res = $('rocketResult'); if(res){ res.className='result-msg win'; res.textContent='Забрано '+fmt(win)+' фишек (x'+rocketMult.toFixed(2)+')'; }
+    recordRoundResult(rocketBetLocked, win);
+    const st = $('rocketStatus'); if(st) st.textContent = 'Успешный вывод на '+rocketMult.toFixed(2)+'x';
+    rocketCashoutBtn.style.display='none';
+    const lb = $('rocketLaunchBtn'); if(lb){ lb.style.display='block'; lb.textContent='Запустить снова'; }
+    setTimeout(resetRocketVisual, 1400);
+  });
+
+  // ========== LADDER ==========
+  const LADDER_LEVELS = 6, LADDER_CELLS = 3, LADDER_MINES = 1;
+  function ladderMultAt(level){
+    const base = LADDER_CELLS / (LADDER_CELLS - LADDER_MINES);
+    return Math.pow(base, level) * 0.95;
+  }
+  let ladderState = null;
+  function renderLadderLevels(){
+    const wrap = $('ladderLevels'); if(!wrap) return;
+    wrap.innerHTML = '';
+    for(let lvl=1; lvl<=LADDER_LEVELS; lvl++){
+      const row = document.createElement('div');
+      row.className = 'ladder-level-row'; row.id = 'ladderLvl'+lvl;
+      row.innerHTML = '<span>Уровень '+lvl+'</span><b>x'+ladderMultAt(lvl).toFixed(2)+'</b>';
+      wrap.appendChild(row);
+    }
+  }
+  renderLadderLevels();
+  function updateLadderLevelStyles(){
+    for(let lvl=1; lvl<=LADDER_LEVELS; lvl++){
+      const row = $('ladderLvl'+lvl); if(!row) continue;
+      row.className = 'ladder-level-row' +
+        (ladderState && lvl <= ladderState.level ? ' passed' : '') +
+        (ladderState && ladderState.active && lvl === ladderState.level+1 ? ' current' : '');
+    }
+  }
+  function buildLadderRow(){
+    const row = $('ladderRow'); if(!row) return;
+    row.innerHTML = '';
+    for(let i=0;i<LADDER_CELLS;i++){
+      const cell = document.createElement('div');
+      cell.className = 'ladder-cell'; cell.dataset.idx = i; cell.textContent = '❔';
+      cell.addEventListener('click', onLadderCellClick);
+      row.appendChild(cell);
+    }
+  }
+  buildLadderRow();
+  const ladderStartBtn = $('ladderStartBtn'), ladderCashoutBtn = $('ladderCashoutBtn');
+  if(ladderStartBtn) ladderStartBtn.addEventListener('click', ()=>{
+    const bet = getBet('ladderBet');
+    if(bet <= 0){ toast('Введите ставку'); return; }
+    if(bet > balance){ toast('Недостаточно фишек'); return; }
+    changeBalance(-bet);
+    ladderState = {bet, level:0, active:true};
+    document.querySelectorAll('.ladder-cell').forEach(c=>{ c.className='ladder-cell'; c.textContent='❔'; });
+    const res = $('ladderResult'); if(res){ res.className='result-msg'; res.textContent=''; }
+    const md = $('ladderMultDisplay'); if(md) md.textContent='x1.00';
+    ladderStartBtn.style.display='none';
+    ladderCashoutBtn.textContent='Забрать выигрыш';
+    ladderCashoutBtn.style.display='block';
+    updateLadderLevelStyles();
+  });
+  function onLadderCellClick(e){
+    if(!ladderState || !ladderState.active) return;
+    const cells = document.querySelectorAll('.ladder-cell');
+    const minePos = Math.floor(Math.random()*LADDER_CELLS);
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    cells.forEach(c=> c.classList.add('locked'));
+    if(idx === minePos){
+      e.currentTarget.classList.add('mine'); e.currentTarget.textContent = '💣';
+      cells.forEach((c,i)=>{ if(i!==idx){ c.textContent = '🟩'; c.classList.add('safe'); } });
+      ladderState.active = false;
+      const res = $('ladderResult'); if(res){ res.className='result-msg lose'; res.textContent = 'Мина! Потеряно ' + fmt(ladderState.bet) + ' фишек'; }
+      recordRoundResult(ladderState.bet, 0);
+      endLadderRound();
+    } else {
+      e.currentTarget.classList.add('safe'); e.currentTarget.textContent = '💎';
+      ladderState.level++;
+      const mult = ladderMultAt(ladderState.level);
+      const md = $('ladderMultDisplay'); if(md) md.textContent='x'+mult.toFixed(2);
+      ladderCashoutBtn.textContent = 'Забрать ' + fmt(ladderState.bet*mult) + ' фишек';
+      updateLadderLevelStyles();
+      if(ladderState.level >= LADDER_LEVELS) cashoutLadder();
+      else setTimeout(buildLadderRow, 550);
+    }
+  }
+  function cashoutLadder(){
+    if(!ladderState || !ladderState.active) return;
+    const mult = ladderMultAt(ladderState.level);
+    const win = ladderState.bet * mult;
+    ladderState.active = false;
+    changeBalance(win);
+    const res = $('ladderResult');
+    if(res){
+      res.className='result-msg win';
+      res.textContent = ladderState.level>0 ? ('Выигрыш ' + fmt(win) + ' фишек (x' + mult.toFixed(2) + ')') : 'Ставка возвращена';
+    }
+    recordRoundResult(ladderState.bet, win);
+    endLadderRound();
+  }
+  if(ladderCashoutBtn) ladderCashoutBtn.addEventListener('click', ()=>{
+    if(!ladderState || !ladderState.active) return;
+    if(ladderState.level === 0){ toast('Сделайте хотя бы один шаг'); return; }
+    cashoutLadder();
+  });
+  function endLadderRound(){
+    ladderCashoutBtn.style.display='none';
+    ladderStartBtn.style.display='block';
+    ladderStartBtn.textContent='Начать игру';
+  }
+
+  // ========== PVP ==========
+  let pvpBusy = false, pvpWaitInterval = null, pvpMatchTimeout = null, pvpCurrentBet = 0;
+  function pvpReset(){
+    clearInterval(pvpWaitInterval); clearTimeout(pvpMatchTimeout);
+    const wt = $('pvpWaitTrack'); if(wt) wt.style.display='none';
+    const cb = $('pvpCancelBtn'); if(cb) cb.style.display='none';
+    const fb = $('pvpFindBtn'); if(fb){ fb.style.display='block'; fb.disabled=false; fb.textContent='Найти соперника'; }
+    const st = $('pvpStatus'); if(st) st.textContent='Сделай ставку, чтобы найти соперника';
+    if($('pvpP1Bet')) $('pvpP1Bet').textContent='◆0';
+    if($('pvpP2Bet')) $('pvpP2Bet').textContent='◆0';
+    if($('pvpP1Pct')) $('pvpP1Pct').textContent='50%';
+    if($('pvpP2Pct')) $('pvpP2Pct').textContent='50%';
+    if($('pvpBarP1')) $('pvpBarP1').style.width='50%';
+    if($('pvpBarP2')) $('pvpBarP2').style.width='50%';
+    pvpBusy = false;
+  }
+  const pvpFindBtn = $('pvpFindBtn'), pvpCancelBtn = $('pvpCancelBtn');
+  if(pvpFindBtn) pvpFindBtn.addEventListener('click', ()=>{
+    if(pvpBusy) return;
+    const bet = getBet('pvpBet');
+    if(bet <= 0){ toast('Введите ставку'); return; }
+    if(bet > balance){ toast('Недостаточно фишек'); return; }
+    pvpBusy = true; pvpCurrentBet = bet;
+    changeBalance(-bet);
+    pvpFindBtn.style.display='none';
+    pvpCancelBtn.style.display='block';
+    const wt = $('pvpWaitTrack'); if(wt) wt.style.display='block';
+    const wf = $('pvpWaitFill'); if(wf) wf.style.width='100%';
+    const rc = $('pvpResultCard'); if(rc) rc.className='pvp-result-card';
+    if($('pvpP1Bet')) $('pvpP1Bet').textContent='◆'+fmt(bet);
+    const WAIT_SECONDS = 20;
+    let secondsLeft = WAIT_SECONDS;
+    const st = $('pvpStatus'); if(st) st.textContent='Ищем соперника... ' + secondsLeft + ' сек';
+    const matchAtSecond = 3 + Math.random()*(WAIT_SECONDS-3);
+    pvpWaitInterval = setInterval(()=>{
+      secondsLeft--;
+      if(wf) wf.style.width = Math.max(0, (secondsLeft/WAIT_SECONDS)*100) + '%';
+      if(secondsLeft > 0 && st) st.textContent = 'Ищем соперника... ' + secondsLeft + ' сек';
+      if(secondsLeft <= 0) clearInterval(pvpWaitInterval);
+    }, 1000);
+    pvpMatchTimeout = setTimeout(()=>{
+      clearInterval(pvpWaitInterval);
+      const oppBet = Math.max(10, Math.round(bet * (0.5 + Math.random()*1.3)));
+      startPvpBattle(bet, oppBet);
+    }, matchAtSecond*1000);
+  });
+  if(pvpCancelBtn) pvpCancelBtn.addEventListener('click', ()=>{
+    if(!pvpBusy) return;
+    clearInterval(pvpWaitInterval); clearTimeout(pvpMatchTimeout);
+    changeBalance(pvpCurrentBet);
+    toast('Соперник не найден — ставка возвращена');
+    pvpReset();
+  });
+  function startPvpBattle(bet, oppBet){
+    const p1Pct = Math.round((bet/(bet+oppBet))*1000)/10;
+    const p2Pct = Math.round(1000-p1Pct*10)/10;
+    const wt = $('pvpWaitTrack'); if(wt) wt.style.display='none';
+    pvpCancelBtn.style.display='none';
+    if($('pvpP1Bet')) $('pvpP1Bet').textContent='◆'+fmt(bet);
+    if($('pvpP2Bet')) $('pvpP2Bet').textContent='◆'+fmt(oppBet);
+    if($('pvpP1Pct')) $('pvpP1Pct').textContent=p1Pct+'%';
+    if($('pvpP2Pct')) $('pvpP2Pct').textContent=p2Pct+'%';
+    if($('pvpBarP1')) $('pvpBarP1').style.width=p1Pct+'%';
+    if($('pvpBarP2')) $('pvpBarP2').style.width=p2Pct+'%';
+    const st = $('pvpStatus'); if(st) st.textContent='Соперник найден! Бой начинается...';
+    setTimeout(()=>{
+      const roll = Math.random()*100;
+      const p1wins = roll <= p1Pct;
+      const bank = bet + oppBet;
+      const commission = bank * 0.05;
+      const payout = bank - commission;
+      const rc = $('pvpResultCard');
+      if(rc){
+        rc.className = 'pvp-result-card show ' + (p1wins ? 'win' : 'lose');
+        if(p1wins){
+          changeBalance(payout);
+          $('pvpResultBig').textContent = '🏆 Победа!';
+          $('pvpResultSmall').textContent = 'Банк ' + fmt(bank) + ' минус 5% комиссии = получено ' + fmt(payout) + ' фишек';
+          recordRoundResult(bet, payout);
+        } else {
+          $('pvpResultBig').textContent = '💥 Поражение';
+          $('pvpResultSmall').textContent = 'Соперник забрал банк — потеряно ' + fmt(bet) + ' фишек';
+          recordRoundResult(bet, 0);
+        }
+      }
+      if(st) st.textContent = 'Матч завершён';
+      pvpFindBtn.style.display='block';
+      pvpFindBtn.textContent='Найти соперника снова';
+      pvpBusy = false;
+    }, 1600);
+  }
+
+  // ========== QUESTS ==========
+  const CHANNEL_URL = 'https://t.me/prostochannellll';
+  const ADMIN_USERNAME = 'crownemir';
+  const questAdminOpenBtn = $('questAdminOpenBtn');
+  if(questAdminOpenBtn) questAdminOpenBtn.addEventListener('click', ()=>{
+    const url = 'https://t.me/'+ADMIN_USERNAME;
+    if(tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank');
+  });
+  const questAdminCheckBtn = $('questAdminCheckBtn');
+  if(questAdminCheckBtn) questAdminCheckBtn.addEventListener('click', ()=>{
+    if(quests.adminMsgDone){ toast('Заявка уже отправлена или награда получена'); return; }
+    quests.adminMsgDone = 'pending';
+    toast('Заявка отправлена на проверку администратору');
+    renderQuests(); saveProfile();
+  });
+  const questChannelOpenBtn = $('questChannelOpenBtn');
+  if(questChannelOpenBtn) questChannelOpenBtn.addEventListener('click', ()=>{
+    if(tg && tg.openTelegramLink) tg.openTelegramLink(CHANNEL_URL); else window.open(CHANNEL_URL,'_blank');
+  });
+  const questChannelCheckBtn = $('questChannelCheckBtn');
+  if(questChannelCheckBtn) questChannelCheckBtn.addEventListener('click', ()=>{
+    if(quests.channelDone){ toast('Заявка уже отправлена или награда получена'); return; }
+    quests.channelDone = 'pending';
+    toast('Заявка отправлена на проверку подписки');
+    renderQuests(); saveProfile();
+  });
+  function checkActivityQuests(){ renderQuests(); }
+  function claimActivityMilestone(games, coins, reward){
+    if(quests.activityClaimed.includes(games)) return;
+    if(stats.games < games || stats.totalEarned < coins) return;
+    quests.activityClaimed.push(games);
+    changeBalance(reward);
+    toast('Начислено ' + fmt(reward) + ' фишек за ступень');
+    renderQuests(); saveProfile();
+  }
+  function renderQuests(){
+    const adminRow = $('questAdminRow');
+    if(adminRow){
+      if(quests.adminMsgDone === true) adminRow.innerHTML = '<div class="quest-done-tag">✓ Подтверждено, награда начислена</div>';
+      else if(quests.adminMsgDone === 'pending') adminRow.innerHTML = '<div class="quest-progress-label" style="color:var(--gold);">⏳ На проверке у администратора</div>';
+    }
+    const channelRow = $('questChannelRow');
+    if(channelRow){
+      if(quests.channelDone === true) channelRow.innerHTML = '<div class="quest-done-tag">✓ Подтверждено, награда начислена</div>';
+      else if(quests.channelDone === 'pending') channelRow.innerHTML = '<div class="quest-progress-label" style="color:var(--gold);">⏳ Проверяется автоматически ботом</div>';
+    }
+    const list = $('questActivityList'); if(!list) return;
+    list.innerHTML = '';
+    ACTIVITY_MILESTONES.forEach((m,idx)=>{
+      const done = quests.activityClaimed.includes(m.games);
+      const prevDone = idx===0 || quests.activityClaimed.includes(ACTIVITY_MILESTONES[idx-1].games);
+      const reached = stats.games >= m.games && stats.totalEarned >= m.coins;
+      const gamesPct = Math.min(100, Math.round(stats.games/m.games*100));
+      const coinsPct = Math.min(100, Math.round(stats.totalEarned/m.coins*100));
+      const card = document.createElement('div');
+      card.className = 'quest-card ladder-step'+(done?' step-done':'')+(!prevDone && !done?' step-locked':'');
+      card.innerHTML =
+        '<div class="quest-top">'+
+          '<div class="quest-ic step-num">'+(done?'✓':m.step)+'</div>'+
+          '<div style="flex:1;">'+
+            '<div class="quest-title">Ступень '+m.step+' · '+m.games+' игр + '+fmt(m.coins)+' монет</div>'+
+            '<div class="quest-desc">Игры: '+Math.min(stats.games,m.games)+' / '+m.games+' · Накоплено: '+fmt(Math.min(stats.totalEarned,m.coins))+' / '+fmt(m.coins)+'</div>'+
+          '</div>'+
+          '<div class="quest-reward">+'+fmt(m.reward)+'</div>'+
+        '</div>'+
+        (done
+          ? '<div class="quest-done-tag">✓ Получено</div>'
+          : !prevDone
+            ? '<div class="quest-progress-label">🔒 Сначала пройди ступень '+m.step+'−1</div>'
+            : '<div class="quest-progress-track"><div class="quest-progress-fill" style="width:'+gamesPct+'%"></div></div>'+
+              '<div class="quest-progress-label">Игры '+gamesPct+'%</div>'+
+              '<div class="quest-progress-track" style="margin-top:6px;"><div class="quest-progress-fill" style="width:'+coinsPct+'%;background:var(--gold-grad);"></div></div>'+
+              '<div class="quest-progress-label">Монеты '+coinsPct+'%</div>'+
+              '<div class="quest-btn-row"><button class="quest-btn-primary" data-claim="'+m.games+'" data-coins="'+m.coins+'" data-reward="'+m.reward+'" '+(reached?'':'disabled')+'>'+(reached?'Забрать награду':'Ещё не достигнуто')+'</button></div>');
+      list.appendChild(card);
+    });
+    list.querySelectorAll('[data-claim]').forEach(btn=>{
+      btn.addEventListener('click', ()=> claimActivityMilestone(parseInt(btn.dataset.claim), parseInt(btn.dataset.coins), parseInt(btn.dataset.reward)));
+    });
+  }
+  renderQuests();
+
+  // ========== SHOP ==========
+  const SHOP_ITEMS = [
+    {emoji:'🧸', name:'Мишка', price:100000},
+    {emoji:'🌸', name:'Цветок', price:300000},
+    {emoji:'🧸', name:'Мишка + Цветок', price:500000},
+  ];
+  const RECOVERY_ITEMS = [
+    {emoji:'', name:'Мишка', reward:50000},
+    {emoji:'🌸', name:'Цветок', reward:150000},
+    {emoji:'🧸🌸', name:'Мишка + Цветок', reward:300000},
+  ];
+  function renderShop(){
+    const list = $('shopList'); if(list){
+      list.innerHTML = '';
+      SHOP_ITEMS.forEach(item=>{
+        const enough = balance >= item.price;
+        const card = document.createElement('div'); card.className = 'shop-card';
+        card.innerHTML =
+          '<div class="shop-emoji">'+item.emoji+'</div>'+
+          '<div class="shop-info">'+
+            '<div class="shop-name">'+item.name+'</div>'+
+            '<div class="shop-price">Нужно накопить: ◆'+fmt(item.price)+'</div>'+
+            '<button class="shop-btn" '+(enough?'':'disabled')+'>'+(enough?'Написать администратору':'Недостаточно фишек ('+fmt(balance)+' / '+fmt(item.price)+')')+'</button>'+
+          '</div>';
+        card.querySelector('button').addEventListener('click', ()=>{
+          if(!enough) return;
+          const url = 'https://t.me/'+ADMIN_USERNAME;
+          if(tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank');
+          toast('У вас накоплено '+fmt(item.price)+' — напишите администратору для получения подарка');
+        });
+        list.appendChild(card);
+      });
+    }
+    const rlist = $('recoveryList'); if(rlist){
+      rlist.innerHTML = '';
+      RECOVERY_ITEMS.forEach(item=>{
+        const card = document.createElement('div'); card.className = 'shop-card';
+        card.innerHTML =
+          '<div class="shop-emoji">'+item.emoji+'</div>'+
+          '<div class="shop-info">'+
+            '<div class="shop-name">'+item.name+'</div>'+
+            '<div class="shop-price">+◆'+fmt(item.reward)+' после проверки</div>'+
+            '<button class="shop-btn">Отправить подарок + скрин</button>'+
+          '</div>';
+        card.querySelector('button').addEventListener('click', ()=>{
+          const url = 'https://t.me/'+ADMIN_USERNAME;
+          if(tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank');
+          toast('Отправьте подарок и скриншот администратору — баланс начислят вручную');
+        });
+        rlist.appendChild(card);
+      });
+    }
+  }
+  renderShop();
+
+  // ========== REFERRALS ==========
+  function renderReferrals(){
+    const botLink = 'https://t.me/jager_bot?start=ref_' + refData.code;
+    const lt = $('refLinkText'); if(lt) lt.textContent = botLink;
+    if($('refInvited')) $('refInvited').textContent = refData.invited;
+    if($('refActive')) $('refActive').textContent = refData.active;
+    if($('refEarned')) $('refEarned').textContent = '◆'+fmt(refData.earned);
+  }
+  const refCopyBtn = $('refCopyBtn');
+  if(refCopyBtn) refCopyBtn.addEventListener('click', ()=>{
+    const text = $('refLinkText').textContent;
+    if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>toast('Ссылка скопирована'));
+    else toast('Скопируйте ссылку вручную: '+text);
+  });
+  renderReferrals();
+
+  // ========== PROFILE ==========
+  function renderProfile(){
+    const set = (id, v)=>{ const el = $(id); if(el) el.textContent = v; };
+    set('statGames', stats.games);
+    set('statWins', stats.wins);
+    set('statLosses', stats.losses);
+    set('statWinrate', stats.games>0 ? Math.round(stats.wins/stats.games*100)+'%' : '0%');
+    set('statTotalWin', '◆'+fmt(stats.totalWin));
+    set('statTotalLose', '◆'+fmt(stats.totalLose));
+    set('statBestWin', '◆'+fmt(stats.bestWin));
+    set('statStreak', stats.streak);
+    set('statWagered', '◆'+fmt(stats.totalWagered||0));
+    const rank = currentRank();
+    const nxt = nextRank();
+    set('profileRankBadge', rank.emoji+' '+rank.name);
+    set('topRankBadge', rank.emoji+' '+rank.name);
+    set('rankCurrentLabel', rank.emoji+' '+rank.name);
+    if(nxt){
+      set('rankNextLabel', 'до '+nxt.name+': ◆'+fmt(Math.max(0,nxt.min-stats.totalEarned)));
+      const span = nxt.min - rank.min;
+      const progressed = Math.min(100, Math.max(0, (stats.totalEarned-rank.min)/span*100));
+      const fill = $('rankProgressFill'); if(fill) fill.style.width = progressed+'%';
+    } else {
+      set('rankNextLabel', 'максимальный ранг');
+      const fill = $('rankProgressFill'); if(fill) fill.style.width = '100%';
+    }
+  }
+  renderProfile();
+
+  // ========== ADMIN PANEL ==========
   let adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || null;
-
   function openAdminLogin(){
-    $('adminLoginOverlay').classList.add('show');
-    $('adminPasswordInput').value = '';
-    $('adminPasswordInput').focus();
+    const ov = $('adminLoginOverlay'); if(ov) ov.classList.add('show');
+    const inp = $('adminPasswordInput'); if(inp){ inp.value = ''; inp.focus(); }
   }
-  $('adminLoginBtn').addEventListener('click', tryAdminLogin);
-  $('adminPasswordInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryAdminLogin(); });
-
+  const adminLoginBtn = $('adminLoginBtn');
+  if(adminLoginBtn) adminLoginBtn.addEventListener('click', tryAdminLogin);
+  const adminPwdInp = $('adminPasswordInput');
+  if(adminPwdInp) adminPwdInp.addEventListener('keydown', e=>{ if(e.key==='Enter') tryAdminLogin(); });
   async function tryAdminLogin(){
     const val = $('adminPasswordInput').value;
     if(!val){ toast('Введите пароль'); return; }
@@ -229,47 +992,44 @@
       $('adminLoginOverlay').classList.remove('show');
       openAdminPanel();
       toast('Вход выполнен');
-    }catch(e){
-      toast('Неверный пароль');
-    }
+    }catch(e){ toast('Неверный пароль'); }
   }
-
   function openAdminPanel(){
     if(!adminToken){ openAdminLogin(); return; }
     renderAdminPanel();
-    $('adminScreen').classList.add('show');
+    const as = $('adminScreen'); if(as) as.classList.add('show');
     clearInterval(adminPollTimer);
     if(API_BASE_URL) adminPollTimer = setInterval(()=> renderAdminPlayers(currentAdminView), 5000);
   }
-  $('adminCloseBtn').addEventListener('click', ()=>{
-    $('adminScreen').classList.remove('show');
+  const adminCloseBtn = $('adminCloseBtn');
+  if(adminCloseBtn) adminCloseBtn.addEventListener('click', ()=>{
+    const as = $('adminScreen'); if(as) as.classList.remove('show');
     clearInterval(adminPollTimer);
   });
-  $('adminLogoutBtn').addEventListener('click', ()=>{
+  const adminLogoutBtn = $('adminLogoutBtn');
+  if(adminLogoutBtn) adminLogoutBtn.addEventListener('click', ()=>{
     adminToken = null;
     sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-    $('adminScreen').classList.remove('show');
+    const as = $('adminScreen'); if(as) as.classList.remove('show');
     clearInterval(adminPollTimer);
     toast('Выход из админ-панели выполнен');
   });
-
   let currentAdminView = 'players';
   let adminPollTimer = null;
-
   async function renderAdminPlayers(view='players'){
     currentAdminView = view;
     if(!API_BASE_URL || !adminToken) return;
-
     try{
       const sortParam = view==='balance' ? 'balance' : (view==='games' ? 'games' : 'recent');
       const res = await fetch(API_BASE_URL + '/api/admin/players?admin_token=' + encodeURIComponent(adminToken) + '&sort=' + sortParam);
       if(res.status === 403){ adminToken=null; sessionStorage.removeItem(ADMIN_TOKEN_KEY); openAdminLogin(); return; }
       if(!res.ok) throw new Error('bad response');
       const data = await res.json();
-      $('adminTotalPlayers').textContent = data.total_players;
-      $('adminOnlinePlayers').textContent = data.online_now;
-      $('adminTotalGames').textContent = data.total_games;
-      $('adminTotalWagered').textContent = '◆'+fmt(data.total_wagered);
+      const setT = (id, v)=>{ const el = $(id); if(el) el.textContent = v; };
+      setT('adminTotalPlayers', data.total_players);
+      setT('adminOnlinePlayers', data.online_now);
+      setT('adminTotalGames', data.total_games);
+      setT('adminTotalWagered', '◆'+fmt(data.total_wagered));
       let html = '<table class="admin-table"><thead><tr><th>#</th><th>Игрок</th><th>Сейчас</th><th>Баланс</th><th>Игр</th><th>Побед</th><th>Статус</th></tr></thead><tbody>';
       data.players.forEach((p,i)=>{
         html += '<tr><td>'+(i+1)+'</td>'+
@@ -279,55 +1039,60 @@
           '<td>'+(p.banned?' 🔒':'✅')+'</td></tr>';
       });
       html += '</tbody></table>';
-      $('adminPlayersTable').innerHTML = html;
+      const tbl = $('adminPlayersTable'); if(tbl) tbl.innerHTML = html;
     }catch(e){
-      $('adminPlayersTable').innerHTML = '<div class="admin-note">Сервер недоступен ('+API_BASE_URL+')</div>';
+      const tbl = $('adminPlayersTable');
+      if(tbl) tbl.innerHTML = '<div class="admin-note">Сервер недоступен ('+API_BASE_URL+')</div>';
     }
   }
-
   function renderAdminPanel(){
     const q = $('adminQuestQueue');
-    q.innerHTML = '';
-    const pendingItems = [];
-    if(quests.adminMsgDone === 'pending') pendingItems.push({key:'adminMsgDone', label:'Сообщение администратору', reward:1000});
-    if(quests.channelDone === 'pending') pendingItems.push({key:'channelDone', label:'Подписка на канал', reward:3000});
-    if(pendingItems.length === 0){
-      q.innerHTML = '<div class="admin-note">Заявок на проверку нет</div>';
-    } else {
-      pendingItems.forEach(it=>{
-        const row = document.createElement('div'); row.className='admin-row';
-        row.innerHTML='<span>'+it.label+' (+'+fmt(it.reward)+')</span><button class="admin-approve-btn" data-key="'+it.key+'" data-reward="'+it.reward+'">Подтвердить</button>';
-        q.appendChild(row);
-      });
-      q.querySelectorAll('[data-key]').forEach(btn=>btn.addEventListener('click',()=>{
-        const key=btn.dataset.key, reward=parseInt(btn.dataset.reward);
-        quests[key]=true; changeBalance(reward);
-        toast('Задание подтверждено, начислено '+fmt(reward));
-        renderQuests(); saveProfile(); renderAdminPanel();
-      }));
+    if(q){
+      q.innerHTML = '';
+      const pendingItems = [];
+      if(quests.adminMsgDone === 'pending') pendingItems.push({key:'adminMsgDone', label:'Сообщение администратору', reward:1000});
+      if(quests.channelDone === 'pending') pendingItems.push({key:'channelDone', label:'Подписка на канал', reward:3000});
+      if(pendingItems.length === 0) q.innerHTML = '<div class="admin-note">Заявок на проверку нет</div>';
+      else {
+        pendingItems.forEach(it=>{
+          const row = document.createElement('div'); row.className='admin-row';
+          row.innerHTML='<span>'+it.label+' (+'+fmt(it.reward)+')</span><button class="admin-approve-btn" data-key="'+it.key+'" data-reward="'+it.reward+'">Подтвердить</button>';
+          q.appendChild(row);
+        });
+        q.querySelectorAll('[data-key]').forEach(btn=>btn.addEventListener('click',()=>{
+          const key=btn.dataset.key, reward=parseInt(btn.dataset.reward);
+          quests[key]=true; changeBalance(reward);
+          toast('Задание подтверждено, начислено '+fmt(reward));
+          renderQuests(); saveProfile(); renderAdminPanel();
+        }));
+      }
     }
-
     const s = $('adminStatsBlock');
-    s.innerHTML =
-      '<div class="admin-row"><span>ID</span><b>'+(tgUser?tgUser.id:'—')+'</b></div>'+
-      '<div class="admin-row"><span>Баланс</span><b>◆'+fmt(balance)+'</b></div>'+
-      '<div class="admin-row"><span>Игр сыграно</span><b>'+stats.games+'</b></div>'+
-      '<div class="admin-row"><span>Ставок на сумму</span><b>◆'+fmt(stats.totalWagered||0)+'</b></div>'+
-      '<div class="admin-row"><span>Победы / поражения</span><b>'+stats.wins+' / '+stats.losses+'</b></div>'+
-      '<div class="admin-row"><span>Win Rate</span><b>'+(stats.games>0?Math.round(stats.wins/stats.games*100):0)+'%</b></div>';
+    if(s){
+      s.innerHTML =
+        '<div class="admin-row"><span>ID</span><b>'+(tgUser?tgUser.id:'—')+'</b></div>'+
+        '<div class="admin-row"><span>Баланс</span><b>◆'+fmt(balance)+'</b></div>'+
+        '<div class="admin-row"><span>Игр сыграно</span><b>'+stats.games+'</b></div>'+
+        '<div class="admin-row"><span>Ставок на сумму</span><b>◆'+fmt(stats.totalWagered||0)+'</b></div>'+
+        '<div class="admin-row"><span>Победы / поражения</span><b>'+stats.wins+' / '+stats.losses+'</b></div>'+
+        '<div class="admin-row"><span>Win Rate</span><b>'+(stats.games>0?Math.round(stats.wins/stats.games*100):0)+'%</b></div>';
+    }
     renderAdminPlayers('players');
     document.querySelectorAll('.admin-tab').forEach(tab=>{
-      tab.onclick=()=>{ document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active')); tab.classList.add('active'); renderAdminPlayers(tab.dataset.adminView); };
+      tab.onclick=()=>{
+        document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active'));
+        tab.classList.add('active');
+        renderAdminPlayers(tab.dataset.adminView);
+      };
     });
   }
-
-  $('adminGiveBtn').addEventListener('click', async ()=>{
+  const adminGiveBtn = $('adminGiveBtn');
+  if(adminGiveBtn) adminGiveBtn.addEventListener('click', async ()=>{
     const target = $('adminGiveTarget').value.trim();
     const amount = parseInt($('adminGiveAmount').value);
     if(!target){ toast('Укажите имя игрока'); return; }
     if(!amount || amount <= 0){ toast('Укажите сумму'); return; }
     if(!adminToken){ toast('Сначала войдите в админ-панель'); return; }
-
     try{
       const res = await fetch(API_BASE_URL + '/api/admin/give', {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -335,13 +1100,13 @@
       });
       const data = await res.json().catch(()=>({}));
       if(!res.ok) throw new Error(data.detail || 'Ошибка');
-      toast('Игроку '+target+' начислено ◆'+fmt(amount)+'. Он увидит фишки при следующей синхронизации (до 15 сек)');
+      toast('Игроку '+target+' начислено ◆'+fmt(amount)+'. Увидит фишки при следующей синхронизации (до 15 сек)');
       $('adminGiveTarget').value=''; $('adminGiveAmount').value='';
       renderAdminPlayers(currentAdminView);
     }catch(e){ toast('Не удалось начислить: '+e.message); }
   });
-
-  $('adminBanBtn').addEventListener('click', async ()=>{
+  const adminBanBtn = $('adminBanBtn');
+  if(adminBanBtn) adminBanBtn.addEventListener('click', async ()=>{
     const target = $('adminBanTarget').value.trim();
     const minutes = parseInt($('adminBanMinutes').value);
     if(!target){ toast('Укажите имя'); return; }
