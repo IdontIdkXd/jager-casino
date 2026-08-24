@@ -16,7 +16,6 @@
     --green:#33e29b; --red:#ff5c7a; --text:#f6f2ff; --muted:#a196c9; --muted-2:#6c6096;
     --radius:18px;
   }
-  /* per-game accent themes */
   #screen-mines{--accent-1:#2fd67f;--accent-mid:#1fb98f;--accent-2:#ffc94a;}
   #screen-roulette{--accent-1:#9257ff;--accent-mid:#c231d9;--accent-2:#f5479c;}
   #screen-upgrade{--accent-1:#ffb03a;--accent-mid:#ff7a4a;--accent-2:#ff4d6d;}
@@ -31,33 +30,23 @@
   }
   .app{ width:100%; max-width:420px; min-height:100vh; display:flex; flex-direction:column; position:relative; padding-bottom:78px; }
   ::-webkit-scrollbar{display:none;}
-
-  /* Topbar */
   .topbar{ display:flex;align-items:center;justify-content:space-between; padding:18px 18px 6px; }
   .brand{ font-family:'Unbounded',sans-serif; font-weight:900; font-size:19px; letter-spacing:0.5px; background:var(--accent-grad); -webkit-background-clip:text;background-clip:text;color:transparent; }
   .topbar-icons{display:flex;gap:10px;}
   .icon-btn{ width:34px;height:34px;border-radius:50%; background:var(--surface);border:1px solid var(--border); display:flex;align-items:center;justify-content:center; color:var(--muted);font-size:14px;cursor:pointer; }
-
-  /* Balance bar */
   .balance-bar{ margin:12px 16px 6px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:12px 14px; display:flex;align-items:center;justify-content:space-between; gap:10px; }
   .balance-left{display:flex;flex-direction:column;gap:2px;}
   .balance-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
   .balance-value{ font-family:'Unbounded',sans-serif; font-size:18px;font-weight:700; display:flex;align-items:center;gap:6px; }
   .chip-dot{width:16px;height:16px;border-radius:50%;background:var(--accent-grad);flex:none; display:inline-flex;align-items:center;justify-content:center;font-size:9px;}
-  
   .demo-note{ margin:2px 16px 14px; font-size:11px;color:var(--muted-2); display:flex;align-items:center;gap:6px; }
   .demo-note .dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex:none;}
-
-  /* Screens */
   .screen{display:none;padding:0 16px 20px;flex:1;}
   .screen.active{display:block;}
-
   h2.section-title{ font-family:'Unbounded',sans-serif; font-size:15px;font-weight:700; margin:6px 0 12px; display:flex;align-items:center;justify-content:space-between; }
   .back-row{display:flex;align-items:center;gap:10px;margin:4px 0 14px;}
   .back-btn{ width:34px;height:34px;border-radius:50%;background:var(--surface); border:1px solid var(--border);display:flex;align-items:center;justify-content:center; cursor:pointer;color:var(--text);font-size:16px; }
   .back-title{font-family:'Unbounded',sans-serif;font-weight:700;font-size:16px;}
-
-  /* Game list cards */
   .game-card{ position:relative; border-radius:var(--radius); padding:16px; margin-bottom:12px; border:1px solid var(--border); background:var(--surface); overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .game-card::before{ content:'';position:absolute;inset:0; background:var(--accent-grad);opacity:0;transition:opacity .2s; }
   .game-card:active::before{opacity:.12;}
@@ -67,16 +56,11 @@
   .game-name{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700;margin-bottom:3px;}
   .game-desc{font-size:12.5px;color:var(--muted);}
   .game-emoji{ font-size:34px;flex:none;position:relative;z-index:1; width:58px;height:58px;border-radius:14px; background:var(--surface-2);display:flex;align-items:center;justify-content:center; }
-
-  /* Bottom nav */
   .bottom-nav{ position:fixed;bottom:0;left:50%;transform:translateX(-50%); width:100%;max-width:420px; background:rgba(10,7,22,0.92); backdrop-filter:blur(14px); border-top:1px solid var(--border); display:flex;justify-content:space-around;align-items:center; padding:9px 4px 12px; z-index:50; }
   .nav-item{ display:flex;flex-direction:column;align-items:center;gap:3px; color:var(--muted-2);font-size:9.5px;cursor:pointer; flex:1;padding:2px 0;white-space:nowrap; }
   .nav-item svg{width:18px;height:18px;stroke:var(--muted-2);fill:none;transition:.15s;}
   .nav-item.active{color:var(--text);}
   .nav-item.active svg{stroke:var(--accent-1);filter:drop-shadow(0 0 6px rgba(139,92,246,.6));}
-  .nav-item.disabled{opacity:.35;}
-
-  /* Buttons/inputs generic */
   .panel{ background:var(--surface);border:1px solid var(--border); border-radius:var(--radius);padding:16px;margin-bottom:14px; }
   .bet-row{display:flex;gap:8px;margin-bottom:12px;}
   .bet-input-wrap{ flex:1;background:var(--surface-2);border:1px solid var(--border); border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px; }
@@ -89,8 +73,6 @@
   .result-msg{ text-align:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:14px; padding:12px;border-radius:12px;margin-bottom:12px;display:none; }
   .result-msg.win{display:block;background:rgba(61,220,132,.12);color:var(--green);border:1px solid rgba(61,220,132,.3);}
   .result-msg.lose{display:block;background:rgba(255,84,112,.12);color:var(--red);border:1px solid rgba(255,84,112,.3);}
-
-  /* ROULETTE */
   .wheel-wrap{display:flex;flex-direction:column;align-items:center;padding:10px 0 4px;}
   .wheel-outer{position:relative;width:250px;height:250px;margin-bottom:18px;}
   .wheel{ width:100%;height:100%;border-radius:50%; border:5px solid var(--surface-2); box-shadow:0 0 0 1px var(--border), 0 20px 50px rgba(139,92,246,.25); transition:transform 4.2s cubic-bezier(.12,.85,.13,1); position:relative; }
@@ -98,8 +80,6 @@
   .wheel-pointer{ position:absolute;top:-6px;left:50%;transform:translateX(-50%); width:0;height:0; border-left:11px solid transparent;border-right:11px solid transparent; border-top:18px solid var(--gold); z-index:4;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
   .mult-legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;}
   .mult-pill{ font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:8px; background:var(--surface-2);border:1px solid var(--border); }
-
-  /* MINES */
   .mines-grid{ display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px; }
   .mine-cell{ aspect-ratio:1;border-radius:10px;background:var(--surface-2); border:1px solid var(--border);display:flex;align-items:center;justify-content:center; font-size:18px;cursor:pointer;transition:transform .1s; }
   .mine-cell:active{transform:scale(0.93);}
@@ -111,8 +91,6 @@
   .stepper{display:flex;align-items:center;gap:10px;}
   .stepper button{ width:30px;height:30px;border-radius:9px;background:var(--surface-2);border:1px solid var(--border); color:var(--text);font-size:16px;cursor:pointer; }
   .stepper span{font-family:'Unbounded',sans-serif;font-weight:700;min-width:20px;text-align:center;}
-
-  /* UPGRADE */
   .upgrade-visual{ display:flex;align-items:center;justify-content:space-between;margin:14px 0 18px;position:relative; }
   .upgrade-box{ width:100px;height:100px;border-radius:14px;background:var(--surface-2); border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px; }
   .upgrade-box .val{font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;}
@@ -126,16 +104,12 @@
   .upgrade-gauge{ position:relative;width:148px;height:148px;border-radius:50%; border:5px solid var(--surface-2); box-shadow:0 0 0 1px var(--border), 0 16px 40px rgba(139,92,246,.2); }
   .upgrade-gauge-needle{ position:absolute;top:50%;left:50%;width:3px;height:60px;background:var(--gold); transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(0deg); transition:transform 2.6s cubic-bezier(.15,.85,.15,1);border-radius:2px; box-shadow:0 0 8px rgba(245,196,81,.7);z-index:2; }
   .upgrade-gauge-center{ position:absolute;top:50%;left:50%;transform:translate(-50%,-50%); width:62px;height:62px;border-radius:50%;background:var(--bg-2);border:1px solid var(--border); display:flex;align-items:center;justify-content:center; font-family:'Unbounded',sans-serif;font-weight:700;font-size:13px;z-index:1; }
-
-  /* ROCKET */
   .rocket-stage{ height:220px;border-radius:16px; background: radial-gradient(circle at 20% 100%, rgba(139,92,246,.18), transparent 55%), var(--surface-2); border:1px solid var(--border); position:relative;overflow:hidden;margin-bottom:14px; display:flex;align-items:center;justify-content:center; }
   .rocket-graph{position:absolute;inset:0;width:100%;height:100%;z-index:1;}
   .rocket-mult{ font-family:'Unbounded',sans-serif;font-weight:900;font-size:40px; z-index:3;transition:color .2s, text-shadow .2s; text-shadow:0 0 18px rgba(139,92,246,.5); }
   .rocket-emoji{ position:absolute;font-size:24px;left:8%;bottom:10px;transform:translate(-50%,50%) rotate(-40deg); transition:left .1s linear, bottom .1s linear;z-index:3; filter:drop-shadow(0 4px 8px rgba(0,0,0,.4)); }
   .rocket-trail{ position:absolute;bottom:0;left:0;right:0;height:0%; background:linear-gradient(0deg, rgba(139,92,246,.28), transparent); transition:height .1s linear;z-index:1; }
   .rocket-status{text-align:center;font-size:12px;color:var(--muted);margin-bottom:12px;}
-
-  /* PROFILE */
   .profile-head{display:flex;flex-direction:column;align-items:center;padding:20px 0 10px;}
   .avatar{ width:78px;height:78px;border-radius:50%;background:var(--accent-grad); display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:10px; box-shadow:0 8px 24px rgba(139,92,246,.35); }
   .username{font-family:'Unbounded',sans-serif;font-weight:700;font-size:16px;}
@@ -145,17 +119,9 @@
   .profile-row-left .ic{font-size:18px;}
   .badge{ background:var(--accent-grad);color:#fff;font-size:11px;font-weight:700; padding:2px 8px;border-radius:20px; }
   .chev{color:var(--muted-2);}
-  .locked-note{font-size:10.5px;color:var(--muted-2);}
-  .reset-btn{margin-top:6px;}
-
   .empty-tab{ padding:60px 20px;text-align:center;color:var(--muted); }
-  .empty-tab .big-ic{font-size:40px;margin-bottom:10px;}
-  .empty-tab .t{font-family:'Unbounded',sans-serif;font-weight:700;color:var(--text);margin-bottom:6px;}
-
   .toast{ position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px); background:var(--surface-2);border:1px solid var(--border); padding:10px 18px;border-radius:12px;font-size:13px;font-weight:600; opacity:0;transition:.25s;pointer-events:none;z-index:100;max-width:380px;text-align:center; }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-  /* ===== PROFILE 2.0 ===== */
   .rank-badge{ display:inline-flex;align-items:center;gap:6px;margin-top:8px; background:var(--surface-2);border:1px solid var(--border); padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700; font-family:'Unbounded',sans-serif; }
   .rank-progress-wrap{margin:14px 16px 0;}
   .rank-progress-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;}
@@ -169,8 +135,6 @@
   .stat-cell .v.red{color:var(--red);}
   .stat-cell .v.gold{color:var(--gold);}
   .tg-id{font-size:11.5px;color:var(--muted-2);margin-top:4px;}
-
-  /* ===== QUESTS ===== */
   .quest-card{ background:var(--surface);border:1px solid var(--border);border-radius:var(--radius); padding:14px;margin-bottom:12px; }
   .quest-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
   .quest-ic{width:38px;height:38px;border-radius:11px;background:var(--surface-2); display:flex;align-items:center;justify-content:center;font-size:18px;flex:none;}
@@ -181,7 +145,6 @@
   .quest-btn-row button{ flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer; font-family:'Inter',sans-serif;font-weight:700;font-size:12.5px; }
   .quest-btn-primary{background:var(--accent-grad);color:#fff;}
   .quest-btn-secondary{background:var(--surface-2);border:1px solid var(--border);color:var(--text);}
-  .quest-btn-row button:disabled{opacity:.4;cursor:not-allowed;}
   .quest-done-tag{ display:inline-flex;align-items:center;gap:5px;color:var(--green);font-size:12px;font-weight:700;margin-top:8px; }
   .quest-progress-track{height:6px;border-radius:4px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;margin-top:8px;}
   .quest-progress-fill{height:100%;background:var(--accent-grad);}
@@ -192,24 +155,17 @@
   .ladder-step.step-locked{opacity:.5;}
   .ladder-step.step-locked .step-num{background:var(--surface-2);color:var(--muted-2);}
   .section-sub{font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:600;}
-
-  /* ===== SHOP ===== */
   .shop-card{ background:var(--surface);border:1px solid var(--border);border-radius:var(--radius); padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px; }
   .shop-emoji{ width:58px;height:58px;border-radius:14px;background:var(--surface-2);flex:none; display:flex;align-items:center;justify-content:center;font-size:28px; }
   .shop-info{flex:1;}
   .shop-name{font-family:'Unbounded',sans-serif;font-weight:700;font-size:14.5px;margin-bottom:3px;}
   .shop-price{font-size:12.5px;color:var(--gold);font-weight:700;margin-bottom:8px;}
   .shop-btn{ width:100%;padding:9px;border-radius:10px;border:none;cursor:pointer; font-family:'Inter',sans-serif;font-weight:700;font-size:12px; background:var(--accent-grad);color:#fff; }
-  .shop-btn:disabled{background:var(--surface-2);border:1px solid var(--border);color:var(--muted-2);cursor:not-allowed;}
-
-  /* ===== REFERRALS ===== */
   .ref-link-box{ background:var(--surface);border:1px solid var(--border);border-radius:14px; padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px; }
   .ref-link-text{flex:1;font-size:12px;color:var(--muted);word-break:break-all;}
   .ref-copy-btn{ background:var(--surface-2);border:1px solid var(--border);color:var(--text); padding:8px 12px;border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;flex:none; }
   .ref-tier-row{display:flex;justify-content:space-between;align-items:center; padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;font-size:12.5px;}
   .ref-tier-row b{color:var(--gold);font-family:'Unbounded',sans-serif;}
-
-  /* ===== PVP ===== */
   .pvp-vs-wrap{padding:6px 0 4px;}
   .pvp-sides{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
   .pvp-side{ flex:1;background:var(--surface);border:1px solid var(--border);border-radius:16px; padding:14px;text-align:center; }
@@ -233,8 +189,6 @@
   .pvp-result-card .big{font-size:20px;font-weight:900;margin-bottom:4px;}
   .pvp-result-card .sm{font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;}
   .pvp-note{font-size:11px;color:var(--muted-2);text-align:center;margin-top:10px;line-height:1.5;}
-
-  /* ===== LADDER ===== */
   .ladder-levels{display:flex;flex-direction:column-reverse;gap:6px;margin-bottom:14px;}
   .ladder-level-row{ display:flex;align-items:center;justify-content:space-between; padding:9px 14px;border-radius:11px;background:var(--surface);border:1px solid var(--border); font-size:12px;color:var(--muted);transition:.2s; }
   .ladder-level-row.passed{background:rgba(61,220,132,.1);border-color:rgba(61,220,132,.35);color:var(--green);}
@@ -246,7 +200,6 @@
   .ladder-cell.safe{background:rgba(61,220,132,.14);border-color:rgba(61,220,132,.4);}
   .ladder-cell.mine{background:rgba(255,84,112,.18);border-color:rgba(255,84,112,.5);}
   .ladder-cell.locked{pointer-events:none;opacity:.5;}
-  /* ===== ADMIN ===== */
   .admin-overlay{ position:fixed;inset:0;background:rgba(6,4,14,.85);backdrop-filter:blur(6px); display:none;align-items:center;justify-content:center;z-index:200;padding:20px; }
   .admin-overlay.show{display:flex;}
   .admin-login-box{ background:var(--surface);border:1px solid var(--border);border-radius:var(--radius); padding:24px;width:100%;max-width:340px;text-align:center; }
@@ -267,10 +220,6 @@
   .admin-give-form input{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:9px;color:var(--text);font-size:12.5px;}
   .admin-give-form button{background:var(--accent-grad);border:none;color:#fff;padding:9px 14px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;}
   .admin-note{font-size:11px;color:var(--muted-2);line-height:1.5;}
-
-  /* ===== ADMIN 3.0 / ROCKET COUNTDOWN ===== */
-  .rocket-countdown{display:none;text-align:center;margin:-4px 0 12px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);font-family:'Unbounded',sans-serif;font-size:13px;color:var(--gold);}
-  .rocket-countdown.show{display:block;}
   .admin-kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
   .admin-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px;}
   .admin-kpi .k{font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
@@ -283,10 +232,6 @@
   .admin-table th{color:var(--muted);font-size:9px;text-transform:uppercase;}
   .admin-scroll{overflow:auto;max-height:360px;}
   .admin-online-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:4px;}
-  .admin-muted{color:var(--muted);font-size:10px;line-height:1.45;}
-
-</style>
-<style id="sticky-action-bar">
   .top-actions{ position:sticky; top:0; z-index:40; display:flex; gap:8px; padding:6px 0 10px; margin:0 0 12px; background:linear-gradient(180deg, var(--bg) 78%, transparent 100%); }
   .top-actions .primary-btn, .top-actions .secondary-btn{ min-height:50px; touch-action:manipulation; box-shadow:0 8px 22px -8px rgba(0,0,0,.55); }
   .top-actions .primary-btn{flex:1;}
@@ -295,7 +240,6 @@
 </head>
 <body>
 <div class="app">
-
   <div class="topbar">
     <div class="brand">JAGER</div>
     <div class="topbar-icons">
@@ -303,7 +247,6 @@
       <div class="icon-btn" id="closeBtn"></div>
     </div>
   </div>
-
   <div class="balance-bar">
     <div class="balance-left">
       <div class="balance-label">Баланс</div>
@@ -312,704 +255,385 @@
     <div class="rank-badge" id="topRankBadge">🥉 Бронза</div>
   </div>
 
-  <!-- SOLO / GAME LIST -->
   <div class="screen active" id="screen-solo">
     <h2 class="section-title">Игры</h2>
-
-    <div class="game-card" data-game="mines">
-      <div class="game-info">
-        <div class="game-online"><span class="dot"></span>7 онлайн</div>
-        <div class="game-name">Мины</div>
-        <div class="game-desc">Открывай клетки, копи множитель</div>
-      </div>
-      <div class="game-emoji">💣</div>
-    </div>
-
-    <div class="game-card" data-game="ladder">
-      <div class="game-info">
-        <div class="game-online"><span class="dot"></span>6 онлайн</div>
-        <div class="game-name">Лесенка</div>
-        <div class="game-desc">Шаг за шагом к множителю</div>
-      </div>
-      <div class="game-emoji">🪜</div>
-    </div>
-
-    <div class="game-card" data-game="roulette">
-      <div class="game-info">
-        <div class="game-online"><span class="dot"></span>11 онлайн</div>
-        <div class="game-name">Рулетка</div>
-        <div class="game-desc">Крути колесо на удачу</div>
-      </div>
-      <div class="game-emoji">🎡</div>
-    </div>
-
-    <div class="game-card" data-game="upgrade">
-      <div class="game-info">
-        <div class="game-online"><span class="dot"></span>5 онлайн</div>
-        <div class="game-name">Апгрейд</div>
-        <div class="game-desc">Рискни балансом ради множителя</div>
-      </div>
-      <div class="game-emoji">📈</div>
-    </div>
-
-    <div class="game-card" data-game="rocket">
-      <div class="game-info">
-        <div class="game-online"><span class="dot"></span>9 онлайн</div>
-        <div class="game-name">Ракета</div>
-        <div class="game-desc">Забери выигрыш до взрыва</div>
-      </div>
-      <div class="game-emoji">🚀</div>
-    </div>
+    <div class="game-card" data-game="mines"><div class="game-info"><div class="game-online"><span class="dot"></span>7 онлайн</div><div class="game-name">Мины</div><div class="game-desc">Открывай клетки, копи множитель</div></div><div class="game-emoji">💣</div></div>
+    <div class="game-card" data-game="ladder"><div class="game-info"><div class="game-online"><span class="dot"></span>6 онлайн</div><div class="game-name">Лесенка</div><div class="game-desc">Шаг за шагом к множителю</div></div><div class="game-emoji">🪜</div></div>
+    <div class="game-card" data-game="roulette"><div class="game-info"><div class="game-online"><span class="dot"></span>11 онлайн</div><div class="game-name">Рулетка</div><div class="game-desc">Крути колесо на удачу</div></div><div class="game-emoji">🎡</div></div>
+    <div class="game-card" data-game="upgrade"><div class="game-info"><div class="game-online"><span class="dot"></span>5 онлайн</div><div class="game-name">Апгрейд</div><div class="game-desc">Рискни балансом ради множителя</div></div><div class="game-emoji">📈</div></div>
+    <div class="game-card" data-game="rocket"><div class="game-info"><div class="game-online"><span class="dot"></span>9 онлайн</div><div class="game-name">Ракета</div><div class="game-desc">Забери выигрыш до взрыва</div></div><div class="game-emoji">🚀</div></div>
   </div>
 
-  <!-- MINES SCREEN -->
   <div class="screen" id="screen-mines">
     <div class="back-row"><div class="back-btn" data-back>←</div><div class="back-title">Мины</div></div>
-    <div class="top-actions">
-      <button class="primary-btn" id="minesStartBtn">Начать игру</button>
-      <button class="secondary-btn" id="minesCashoutBtn" style="display:none;">Забрать выигрыш</button>
-    </div>
+    <div class="top-actions"><button class="primary-btn" id="minesStartBtn">Начать игру</button><button class="secondary-btn" id="minesCashoutBtn" style="display:none;">Забрать выигрыш</button></div>
     <div class="panel">
-      <div class="bet-row">
-        <div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="minesBet" value="50" min="1"></div>
-        <div class="quick-bet">
-          <button data-half="minesBet">1/2</button>
-          <button data-double="minesBet">x2</button>
-        </div>
-      </div>
-      <div class="mines-stat-row">
-        <span>Количество мин</span>
-        <div class="stepper">
-          <button id="minesMinus">–</button><span id="minesCount">3</span><button id="minesPlus">+</button>
-        </div>
-      </div>
+      <div class="bet-row"><div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="minesBet" value="50" min="1"></div><div class="quick-bet"><button data-half="minesBet">1/2</button><button data-double="minesBet">x2</button></div></div>
+      <div class="mines-stat-row"><span>Количество мин</span><div class="stepper"><button id="minesMinus">–</button><span id="minesCount">3</span><button id="minesPlus">+</button></div></div>
       <div class="mines-stat-row"><span>Текущий множитель</span><b id="minesMultDisplay">x1.00</b></div>
     </div>
-
     <div class="result-msg" id="minesResult"></div>
-
     <div class="mines-grid" id="minesGrid"></div>
-
   </div>
 
-  <!-- ROULETTE SCREEN -->
   <div class="screen" id="screen-roulette">
     <div class="back-row"><div class="back-btn" data-back>←</div><div class="back-title">Рулетка</div></div>
-    <div class="top-actions">
-      <button class="primary-btn" id="rouletteSpinBtn">Крутить</button>
-    </div>
-
-    <div class="wheel-wrap">
-      <div class="wheel-outer">
-        <div class="wheel-pointer"></div>
-        <div class="wheel" id="wheel"></div>
-        <div class="wheel-center" id="wheelCenter">?</div>
-      </div>
-      <div class="mult-legend" id="wheelLegend"></div>
-    </div>
-
+    <div class="top-actions"><button class="primary-btn" id="rouletteSpinBtn">Крутить</button></div>
+    <div class="wheel-wrap"><div class="wheel-outer"><div class="wheel-pointer"></div><div class="wheel" id="wheel"></div><div class="wheel-center" id="wheelCenter">?</div></div><div class="mult-legend" id="wheelLegend"></div></div>
     <div class="result-msg" id="rouletteResult"></div>
-
-    <div class="panel">
-      <div class="bet-row">
-        <div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="rouletteBet" value="50" min="1"></div>
-        <div class="quick-bet">
-          <button data-half="rouletteBet">1/2</button>
-          <button data-double="rouletteBet">x2</button>
-        </div>
-      </div>
-    </div>
+    <div class="panel"><div class="bet-row"><div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="rouletteBet" value="50" min="1"></div><div class="quick-bet"><button data-half="rouletteBet">1/2</button><button data-double="rouletteBet">x2</button></div></div></div>
   </div>
 
-  <!-- UPGRADE SCREEN -->
   <div class="screen" id="screen-upgrade">
     <div class="back-row"><div class="back-btn" data-back>←</div><div class="back-title">Апгрейд</div></div>
-    <div class="top-actions">
-      <button class="primary-btn" id="upgradeGoBtn">Попробовать апгрейд</button>
-    </div>
-
+    <div class="top-actions"><button class="primary-btn" id="upgradeGoBtn">Попробовать апгрейд</button></div>
     <div class="panel">
-      <div class="bet-row">
-        <div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="upgradeBet" value="50" min="1"></div>
-        <div class="quick-bet">
-          <button data-half="upgradeBet">1/2</button>
-          <button data-double="upgradeBet">x2</button>
-        </div>
-      </div>
-
-      <div class="upgrade-visual">
-        <div class="upgrade-box"><div class="val" id="upgradeFromVal">◆50</div><div class="lbl">Ставка</div></div>
-        <div class="upgrade-arrow">→</div>
-        <div class="upgrade-box"><div class="val" id="upgradeToVal">◆100</div><div class="lbl">При успехе</div></div>
-      </div>
-
-      <div class="upgrade-gauge-wrap">
-        <div class="upgrade-gauge" id="upgradeGauge">
-          <div class="upgrade-gauge-needle" id="upgradeNeedle"></div>
-          <div class="upgrade-gauge-center" id="upgradeGaugeCenter">47%</div>
-        </div>
-      </div>
-
-      <div class="chance-slider-wrap">
-        <div class="chance-row"><span>Множитель</span><b id="upgradeMultLabel">x2.00</b></div>
-        <input type="range" id="upgradeMultSlider" min="12" max="100" value="20" step="1">
-        <div class="chance-row" style="margin-top:8px;"><span>Шанс успеха</span><b id="upgradeChanceLabel">47%</b></div>
-      </div>
+      <div class="bet-row"><div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="upgradeBet" value="50" min="1"></div><div class="quick-bet"><button data-half="upgradeBet">1/2</button><button data-double="upgradeBet">x2</button></div></div>
+      <div class="upgrade-visual"><div class="upgrade-box"><div class="val" id="upgradeFromVal">◆50</div><div class="lbl">Ставка</div></div><div class="upgrade-arrow">→</div><div class="upgrade-box"><div class="val" id="upgradeToVal">◆100</div><div class="lbl">При успехе</div></div></div>
+      <div class="upgrade-gauge-wrap"><div class="upgrade-gauge" id="upgradeGauge"><div class="upgrade-gauge-needle" id="upgradeNeedle"></div><div class="upgrade-gauge-center" id="upgradeGaugeCenter">47%</div></div></div>
+      <div class="chance-slider-wrap"><div class="chance-row"><span>Множитель</span><b id="upgradeMultLabel">x2.00</b></div><input type="range" id="upgradeMultSlider" min="12" max="100" value="20" step="1"><div class="chance-row" style="margin-top:8px;"><span>Шанс успеха</span><b id="upgradeChanceLabel">47%</b></div></div>
     </div>
-
     <div class="result-msg" id="upgradeResult"></div>
   </div>
 
-  <!-- ROCKET SCREEN -->
   <div class="screen" id="screen-rocket">
     <div class="back-row"><div class="back-btn" data-back>←</div><div class="back-title">Ракета</div></div>
-    <div class="top-actions">
-      <button class="primary-btn" id="rocketLaunchBtn">Запустить</button>
-      <button class="secondary-btn" id="rocketCashoutBtn" style="display:none;">Забрать 1.00x</button>
-    </div>
-
-    <div class="rocket-stage">
-      <div class="rocket-trail" id="rocketTrail"></div>
-      <svg class="rocket-graph" viewBox="0 0 300 220" preserveAspectRatio="none">
-        <polyline id="rocketPath" points="0,220" fill="none" style="stroke:var(--accent-1)" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-      <div class="rocket-mult" id="rocketMultDisplay" style="color:var(--text)">1.00x</div>
-      <div class="rocket-emoji" id="rocketEmoji">🚀</div>
-    </div>
+    <div class="top-actions"><button class="primary-btn" id="rocketLaunchBtn">Запустить</button><button class="secondary-btn" id="rocketCashoutBtn" style="display:none;">Забрать 1.00x</button></div>
+    <div class="rocket-stage"><div class="rocket-trail" id="rocketTrail"></div><svg class="rocket-graph" viewBox="0 0 300 220" preserveAspectRatio="none"><polyline id="rocketPath" points="0,220" fill="none" style="stroke:var(--accent-1)" stroke-width="3" stroke-linecap="round"/></svg><div class="rocket-mult" id="rocketMultDisplay" style="color:var(--text)">1.00x</div><div class="rocket-emoji" id="rocketEmoji">🚀</div></div>
     <div class="rocket-status" id="rocketStatus">Сделай ставку и запусти ракету</div>
-    <div class="rocket-countdown" id="rocketCountdown">Старт через 30 сек</div>
-
     <div class="result-msg" id="rocketResult"></div>
-
-    <div class="panel">
-      <div class="bet-row">
-        <div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="rocketBet" value="50" min="1"></div>
-        <div class="quick-bet">
-          <button data-half="rocketBet">1/2</button>
-          <button data-double="rocketBet">x2</button>
-        </div>
-      </div>
-    </div>
+    <div class="panel"><div class="bet-row"><div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="rocketBet" value="50" min="1"></div><div class="quick-bet"><button data-half="rocketBet">1/2</button><button data-double="rocketBet">x2</button></div></div></div>
   </div>
 
-  <!-- LADDER SCREEN -->
   <div class="screen" id="screen-ladder">
     <div class="back-row"><div class="back-btn" data-back>←</div><div class="back-title">Лесенка</div></div>
-    <div class="top-actions">
-      <button class="primary-btn" id="ladderStartBtn">Начать игру</button>
-      <button class="secondary-btn" id="ladderCashoutBtn" style="display:none;">Забрать выигрыш</button>
-    </div>
-
-    <div class="panel">
-      <div class="bet-row">
-        <div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="ladderBet" value="50" min="1"></div>
-        <div class="quick-bet">
-          <button data-half="ladderBet">1/2</button>
-          <button data-double="ladderBet">x2</button>
-        </div>
-      </div>
-      <div class="mines-stat-row"><span>Текущий множитель</span><b id="ladderMultDisplay">x1.00</b></div>
-    </div>
-
+    <div class="top-actions"><button class="primary-btn" id="ladderStartBtn">Начать игру</button><button class="secondary-btn" id="ladderCashoutBtn" style="display:none;">Забрать выигрыш</button></div>
+    <div class="panel"><div class="bet-row"><div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="ladderBet" value="50" min="1"></div><div class="quick-bet"><button data-half="ladderBet">1/2</button><button data-double="ladderBet">x2</button></div></div><div class="mines-stat-row"><span>Текущий множитель</span><b id="ladderMultDisplay">x1.00</b></div></div>
     <div class="result-msg" id="ladderResult"></div>
-
     <div class="ladder-levels" id="ladderLevels"></div>
     <div class="ladder-row" id="ladderRow"></div>
   </div>
 
-  <!-- PVP TAB -->
   <div class="screen" id="screen-pvp">
     <h2 class="section-title">⚔️ PvP Battle</h2>
-    <div class="top-actions">
-      <button class="primary-btn" id="pvpFindBtn">Найти соперника</button>
-      <button class="secondary-btn" id="pvpCancelBtn" style="display:none;">Отменить и вернуть ставку</button>
-    </div>
-
-    <div class="pvp-vs-wrap">
-      <div class="pvp-sides">
-        <div class="pvp-side p1">
-          <div class="av">🐺</div>
-          <div class="nm" id="pvpP1Name">Ты</div>
-          <div class="bt" id="pvpP1Bet">◆0</div>
-          <div class="pc" id="pvpP1Pct">50%</div>
-        </div>
-        <div class="pvp-vs-mid">VS</div>
-        <div class="pvp-side p2">
-          <div class="av"></div>
-          <div class="nm" id="pvpP2Name">Соперник</div>
-          <div class="bt" id="pvpP2Bet">◆0</div>
-          <div class="pc" id="pvpP2Pct">50%</div>
-        </div>
-      </div>
-      <div class="pvp-bar-track">
-        <div class="pvp-bar-p1" id="pvpBarP1" style="width:50%"></div>
-        <div class="pvp-bar-p2" id="pvpBarP2" style="width:50%"></div>
-      </div>
-      <div class="pvp-status" id="pvpStatus">Сделай ставку, чтобы найти соперника</div>
-      <div class="pvp-wait-track" id="pvpWaitTrack" style="display:none;">
-        <div class="pvp-wait-fill" id="pvpWaitFill"></div>
-      </div>
-      <div class="pvp-result-card" id="pvpResultCard">
-        <div class="big" id="pvpResultBig"></div>
-        <div class="sm" id="pvpResultSmall"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="bet-row">
-        <div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="pvpBet" value="100" min="1"></div>
-        <div class="quick-bet">
-          <button data-half="pvpBet">1/2</button>
-          <button data-double="pvpBet">x2</button>
-        </div>
-      </div>
-    </div>
-    <div class="pvp-note">Ставка ждёт соперника до 20 секунд, как в rolls-ботах. Комиссия бота с банка матча — 5%. Шанс победы всегда пропорционален соотношению ставок.</div>
+    <div class="top-actions"><button class="primary-btn" id="pvpFindBtn">Найти соперника</button><button class="secondary-btn" id="pvpCancelBtn" style="display:none;">Отменить и вернуть ставку</button></div>
+    <div class="pvp-vs-wrap"><div class="pvp-sides"><div class="pvp-side p1"><div class="av">🐺</div><div class="nm" id="pvpP1Name">Ты</div><div class="bt" id="pvpP1Bet">◆0</div><div class="pc" id="pvpP1Pct">50%</div></div><div class="pvp-vs-mid">VS</div><div class="pvp-side p2"><div class="av"></div><div class="nm" id="pvpP2Name">Соперник</div><div class="bt" id="pvpP2Bet">◆0</div><div class="pc" id="pvpP2Pct">50%</div></div></div><div class="pvp-bar-track"><div class="pvp-bar-p1" id="pvpBarP1" style="width:50%"></div><div class="pvp-bar-p2" id="pvpBarP2" style="width:50%"></div></div><div class="pvp-status" id="pvpStatus">Сделай ставку, чтобы найти соперника</div><div class="pvp-wait-track" id="pvpWaitTrack" style="display:none;"><div class="pvp-wait-fill" id="pvpWaitFill"></div></div><div class="pvp-result-card" id="pvpResultCard"><div class="big" id="pvpResultBig"></div><div class="sm" id="pvpResultSmall"></div></div></div>
+    <div class="panel"><div class="bet-row"><div class="bet-input-wrap"><span class="chip-dot">◆</span><input type="number" id="pvpBet" value="100" min="1"></div><div class="quick-bet"><button data-half="pvpBet">1/2</button><button data-double="pvpBet">x2</button></div></div></div>
+    <div class="pvp-note">Ставка ждёт соперника до 20 секунд. Комиссия бота с банка матча — 5%. Шанс победы всегда пропорционален соотношению ставок.</div>
   </div>
 
-  <!-- GIVEAWAYS / QUESTS TAB -->
   <div class="screen" id="screen-giveaways">
     <h2 class="section-title"> Задания</h2>
-
-    <div class="quest-card">
-      <div class="quest-top">
-        <div class="quest-ic">✉️</div>
-        <div style="flex:1;">
-          <div class="quest-title">Написать администратору</div>
-          <div class="quest-desc">Напиши админу в личные сообщения любое сообщение: @crownemir</div>
-        </div>
-        <div class="quest-reward">+1 000</div>
-      </div>
-      <div class="quest-btn-row" id="questAdminRow">
-        <button class="quest-btn-secondary" id="questAdminOpenBtn">Написать</button>
-        <button class="quest-btn-primary" id="questAdminCheckBtn">Проверить</button>
-      </div>
-    </div>
-
-    <div class="quest-card">
-      <div class="quest-top">
-        <div class="quest-ic"></div>
-        <div style="flex:1;">
-          <div class="quest-title">Подписка на канал</div>
-          <div class="quest-desc">Подпишись на канал и поставь любую реакцию</div>
-        </div>
-        <div class="quest-reward">+3 000</div>
-      </div>
-      <div class="quest-btn-row" id="questChannelRow">
-        <button class="quest-btn-secondary" id="questChannelOpenBtn">Открыть канал</button>
-        <button class="quest-btn-primary" id="questChannelCheckBtn">Проверить</button>
-      </div>
-    </div>
-
-    <div class="section-sub">Награды за активность</div>
-    <div id="questActivityList"></div>
+    <div class="quest-card"><div class="quest-top"><div class="quest-ic">✉️</div><div style="flex:1;"><div class="quest-title">Написать администратору</div><div class="quest-desc">Напиши админу в личные сообщения любое сообщение: @crownemir</div></div><div class="quest-reward">+1 000</div></div><div class="quest-btn-row" id="questAdminRow"><button class="quest-btn-secondary" id="questAdminOpenBtn">Написать</button><button class="quest-btn-primary" id="questAdminCheckBtn">Проверить</button></div></div>
+    <div class="quest-card"><div class="quest-top"><div class="quest-ic"></div><div style="flex:1;"><div class="quest-title">Подписка на канал</div><div class="quest-desc">Подпишись на канал и поставь любую реакцию</div></div><div class="quest-reward">+3 000</div></div><div class="quest-btn-row" id="questChannelRow"><button class="quest-btn-secondary" id="questChannelOpenBtn">Открыть канал</button><button class="quest-btn-primary" id="questChannelCheckBtn">Проверить</button></div></div>
+    <div class="section-sub">Награды за активность</div><div id="questActivityList"></div>
   </div>
 
-  <!-- SHOP TAB -->
   <div class="screen" id="screen-shop">
     <h2 class="section-title">🛒 Магазин подарков</h2>
     <div class="pvp-note" style="text-align:left;margin:-4px 0 14px;">Копи монеты в играх и обменивай их на подарки. Например: накопил 100 000 — получаешь Мишку. Просто напиши администратору, когда наберёшь нужную сумму — он проверит баланс и вручную выдаст подарок.</div>
     <div id="shopList"></div>
-
     <div class="section-sub">Восстановление баланса</div>
     <div style="font-size:11.5px;color:var(--muted-2);margin-bottom:10px;line-height:1.5;">Если баланс закончился — отправь подарок администратору, приложи скриншот подтверждения. После проверки баланс начислит администратор вручную.</div>
     <div id="recoveryList"></div>
   </div>
 
-  <!-- REFERRALS TAB -->
   <div class="screen" id="screen-referrals">
     <h2 class="section-title">👥 Рефералы</h2>
-
-    <div class="ref-link-box">
-      <div class="ref-link-text" id="refLinkText">t.me/jager_bot?start=ref_...</div>
-      <button class="ref-copy-btn" id="refCopyBtn">Копировать</button>
-    </div>
-
-    <div class="stat-grid" style="margin:0 0 16px;">
-      <div class="stat-cell"><div class="l">Приглашено</div><div class="v" id="refInvited">0</div></div>
-      <div class="stat-cell"><div class="l">Активных</div><div class="v green" id="refActive">0</div></div>
-      <div class="stat-cell" style="grid-column:1/-1;"><div class="l">Заработано</div><div class="v gold" id="refEarned">◆0</div></div>
-    </div>
-
+    <div class="ref-link-box"><div class="ref-link-text" id="refLinkText">t.me/jager_bot?start=ref_...</div><button class="ref-copy-btn" id="refCopyBtn">Копировать</button></div>
+    <div class="stat-grid" style="margin:0 0 16px;"><div class="stat-cell"><div class="l">Приглашено</div><div class="v" id="refInvited">0</div></div><div class="stat-cell"><div class="l">Активных</div><div class="v green" id="refActive">0</div></div><div class="stat-cell" style="grid-column:1/-1;"><div class="l">Заработано</div><div class="v gold" id="refEarned">◆0</div></div></div>
     <div class="section-sub">Награды за приглашённого</div>
     <div class="ref-tier-row"><span>Обычный пользователь</span><b>+5 000</b></div>
     <div class="ref-tier-row"><span>Premium-пользователь</span><b>+15 000</b></div>
     <div class="pvp-note">Награда начисляется только после подтверждения активности реферала на сервере — это защищает от фейковых аккаунтов.</div>
   </div>
 
-  <!-- PROFILE TAB -->
   <div class="screen" id="screen-profile">
-    <div class="profile-head">
-      <div class="avatar">🐺</div>
-      <div class="username" id="profileUsername">Игрок</div>
-      <div class="tg-id" id="profileTgId">ID: —</div>
-      <div class="rank-badge" id="profileRankBadge">🥉 Бронза</div>
-    </div>
-
-    <div class="rank-progress-wrap">
-      <div class="rank-progress-row"><span id="rankCurrentLabel">Бронза</span><span id="rankNextLabel">до Серебра</span></div>
-      <div class="rank-progress-track"><div class="rank-progress-fill" id="rankProgressFill" style="width:0%"></div></div>
-    </div>
-
+    <div class="profile-head"><div class="avatar">🐺</div><div class="username" id="profileUsername">Игрок</div><div class="tg-id" id="profileTgId">ID: —</div><div class="rank-badge" id="profileRankBadge">🥉 Бронза</div></div>
+    <div class="rank-progress-wrap"><div class="rank-progress-row"><span id="rankCurrentLabel">Бронза</span><span id="rankNextLabel">до Серебра</span></div><div class="rank-progress-track"><div class="rank-progress-fill" id="rankProgressFill" style="width:0%"></div></div></div>
     <div class="stat-grid">
-      <div class="stat-cell"><div class="l">Всего игр</div><div class="v" id="statGames">0</div></div>
-      <div class="stat-cell"><div class="l">Win Rate</div><div class="v gold" id="statWinrate">0%</div></div>
-      <div class="stat-cell"><div class="l">Победы</div><div class="v green" id="statWins">0</div></div>
-      <div class="stat-cell"><div class="l">Поражения</div><div class="v red" id="statLosses">0</div></div>
-      <div class="stat-cell"><div class="l">Общий выигрыш</div><div class="v green" id="statTotalWin">◆0</div></div>
-      <div class="stat-cell"><div class="l">Общий проигрыш</div><div class="v red" id="statTotalLose">◆0</div></div>
-      <div class="stat-cell"><div class="l">Лучшая победа</div><div class="v gold" id="statBestWin">◆0</div></div>
-      <div class="stat-cell"><div class="l">Серия побед</div><div class="v" id="statStreak">0</div></div>
+      <div class="stat-cell"><div class="l">Всего игр</div><div class="v" id="statGames">0</div></div><div class="stat-cell"><div class="l">Win Rate</div><div class="v gold" id="statWinrate">0%</div></div>
+      <div class="stat-cell"><div class="l">Победы</div><div class="v green" id="statWins">0</div></div><div class="stat-cell"><div class="l">Поражения</div><div class="v red" id="statLosses">0</div></div>
+      <div class="stat-cell"><div class="l">Общий выигрыш</div><div class="v green" id="statTotalWin">◆0</div></div><div class="stat-cell"><div class="l">Общий проигрыш</div><div class="v red" id="statTotalLose">◆0</div></div>
+      <div class="stat-cell"><div class="l">Лучшая победа</div><div class="v gold" id="statBestWin">◆0</div></div><div class="stat-cell"><div class="l">Серия побед</div><div class="v" id="statStreak">0</div></div>
       <div class="stat-cell"><div class="l">Сумма ставок</div><div class="v gold" id="statWagered">◆0</div></div>
     </div>
-
-    <div class="profile-list" style="margin-top:16px;">
-      <div class="profile-row">
-        <div class="profile-row-left"><span class="ic"></span>Инвентарь</div>
-        <div style="display:flex;align-items:center;gap:8px;"><span class="badge">0</span><span class="chev">›</span></div>
-      </div>
-    </div>
+    <div class="profile-list" style="margin-top:16px;"><div class="profile-row"><div class="profile-row-left"><span class="ic"></span>Инвентарь</div><div style="display:flex;align-items:center;gap:8px;"><span class="badge">0</span><span class="chev">›</span></div></div></div>
   </div>
 
   <div class="bottom-nav">
-    <div class="nav-item" data-tab="pvp">
-      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M6 3l12 12M18 3L6 15"/></svg>
-      ПвП
-    </div>
-    <div class="nav-item active" data-tab="solo">
-      <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>
-      Игры
-    </div>
-    <div class="nav-item" data-tab="giveaways">
-      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 8h18M12 8c-2-4-6-4-6-1s3 1 6 1c3 0 6 2 6-1s-4-3-6 0z"/></svg>
-      Задания
-    </div>
-    <div class="nav-item" data-tab="shop">
-      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l1-6h14l1 6M4 10v10h16V10M4 10h16"/></svg>
-      Магазин
-    </div>
-    <div class="nav-item" data-tab="referrals">
-      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3.5 3-5.5 6-5.5s6 2 6 5.5M15 15c2.4.3 4 2 4 5"/></svg>
-      Рефералы
-    </div>
-    <div class="nav-item" data-tab="profile">
-      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
-      Профиль
-    </div>
+    <div class="nav-item" data-tab="pvp"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M6 3l12 12M18 3L6 15"/></svg>ПвП</div>
+    <div class="nav-item active" data-tab="solo"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>Игры</div>
+    <div class="nav-item" data-tab="giveaways"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 8h18M12 8c-2-4-6-4-6-1s3 1 6 1c3 0 6 2 6-1s-4-3-6 0z"/></svg>Задания</div>
+    <div class="nav-item" data-tab="shop"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l1-6h14l1 6M4 10v10h16V10M4 10h16"/></svg>Магазин</div>
+    <div class="nav-item" data-tab="referrals"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3.5 3-5.5 6-5.5s6 2 6 5.5M15 15c2.4.3 4 2 4 5"/></svg>Рефералы</div>
+    <div class="nav-item" data-tab="profile"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>Профиль</div>
   </div>
-
   <div class="toast" id="toast"></div>
 </div>
 
-<!-- MINI-REGISTRATION -->
-<div class="admin-overlay" id="regOverlay">
-  <div class="admin-login-box">
-    <h3>🐺 Добро пожаловать в JAGER</h3>
-    <div class="admin-note" style="margin-bottom:14px;">Придумай имя и пароль — так администратор сможет видеть тебя в игре и начислять награды.</div>
-    <input type="text" id="regNameInput" placeholder="Имя" maxlength="24" autocomplete="off">
-    <input type="password" id="regPasswordInput" placeholder="Пароль" maxlength="64" autocomplete="off">
-    <button id="regSubmitBtn">Войти в казино</button>
-    <div class="admin-note" id="regError" style="margin-top:10px;color:var(--red);"></div>
-  </div>
-</div>
-
-<!-- ADMIN LOGIN -->
-<div class="admin-overlay" id="adminLoginOverlay">
-  <div class="admin-login-box">
-    <h3> Вход в админ-панель</h3>
-    <input type="password" id="adminPasswordInput" placeholder="Пароль">
-    <button id="adminLoginBtn">Войти</button>
-    <div class="admin-note" style="margin-top:10px;">Доступ только с этого экрана. Скрытый вход: 5 нажатий на ⋮ вверху.</div>
-  </div>
-</div>
-
-<!-- ADMIN PANEL -->
+<div class="admin-overlay" id="regOverlay"><div class="admin-login-box"><h3>🐺 Добро пожаловать в JAGER</h3><div class="admin-note" style="margin-bottom:14px;">Придумай имя и пароль — так администратор сможет видеть тебя в игре и начислять награды.</div><input type="text" id="regNameInput" placeholder="Имя" maxlength="24" autocomplete="off"><input type="password" id="regPasswordInput" placeholder="Пароль" maxlength="64" autocomplete="off"><button id="regSubmitBtn">Войти в казино</button><div class="admin-note" id="regError" style="margin-top:10px;color:var(--red);"></div></div></div>
+<div class="admin-overlay" id="adminLoginOverlay"><div class="admin-login-box"><h3> Вход в админ-панель</h3><input type="password" id="adminPasswordInput" placeholder="Пароль"><button id="adminLoginBtn">Войти</button><div class="admin-note" style="margin-top:10px;">Доступ только с этого экрана. Скрытый вход: 5 нажатий на ⋮ вверху.</div></div></div>
 <div class="admin-screen" id="adminScreen">
-  <div class="admin-top">
-    <h2>⚙️ Админ-панель</h2>
-    <div class="admin-close" id="adminCloseBtn">✕</div>
-  </div>
-
-  <div class="admin-section">
-    <h4>Выдать монеты</h4>
-    <div class="admin-give-form">
-      <input type="text" id="adminGiveTarget" placeholder="Имя игрока">
-      <input type="number" id="adminGiveAmount" placeholder="Сумма" style="max-width:100px;">
-      <button id="adminGiveBtn">Выдать</button>
-    </div>
-    <div class="admin-note">Если сервер подключён (API_BASE_URL) — начисляет монеты любому зарегистрированному игроку по имени. Без сервера — только этому устройству (демо).</div>
-  </div>
-
-  <div class="admin-section">
-    <h4>Заявки на проверку заданий</h4>
-    <div id="adminQuestQueue"></div>
-    <div class="admin-note" style="margin-top:8px;">Заявки этого устройства. Для общей очереди заявок от всех игроков нужно расширить server.py — могу добавить отдельным шагом.</div>
-  </div>
-
-  <div class="admin-section">
-    <h4>Мониторинг игроков</h4>
-    <div class="admin-kpi-grid">
-      <div class="admin-kpi"><div class="k">Игроков всего</div><div class="v" id="adminTotalPlayers">0</div></div>
-      <div class="admin-kpi"><div class="k">Онлайн сейчас</div><div class="v" id="adminOnlinePlayers">0</div></div>
-      <div class="admin-kpi"><div class="k">Всего игр</div><div class="v" id="adminTotalGames">0</div></div>
-      <div class="admin-kpi"><div class="k">Оборот ставок</div><div class="v" id="adminTotalWagered">◆0</div></div>
-    </div>
-    <div class="admin-tabs">
-      <button class="admin-tab active" data-admin-view="players">Игроки</button>
-      <button class="admin-tab" data-admin-view="balance">Топ баланса</button>
-      <button class="admin-tab" data-admin-view="games">Топ игр</button>
-    </div>
-    <div class="admin-scroll"><div id="adminPlayersTable"></div></div>
-  </div>
-
-  <div class="admin-section">
-    <h4>Статистика текущего игрока</h4>
-    <div id="adminStatsBlock"></div>
-  </div>
-
-  <div class="admin-section">
-    <h4>Бан / ограничение</h4>
-    <div class="admin-give-form">
-      <input type="text" id="adminBanTarget" placeholder="Имя игрока">
-      <input type="number" id="adminBanMinutes" placeholder="Минуты" style="max-width:100px;">
-      <button id="adminBanBtn">Бан</button>
-    </div>
-    <div class="admin-note">Работает при подключённом сервере (0 минут = навсегда). Без сервера бан недоступен.</div>
-  </div>
-
-  <div class="admin-section">
-    <button class="secondary-btn" id="adminLogoutBtn" style="width:100%;">Выйти из админ-панели</button>
-  </div>
+  <div class="admin-top"><h2>⚙️ Админ-панель</h2><div class="admin-close" id="adminCloseBtn">✕</div></div>
+  <div class="admin-section"><h4>Выдать монеты</h4><div class="admin-give-form"><input type="text" id="adminGiveTarget" placeholder="Имя игрока"><input type="number" id="adminGiveAmount" placeholder="Сумма" style="max-width:100px;"><button id="adminGiveBtn">Выдать</button></div><div class="admin-note">Начисляет монеты любому зарегистрированному игроку по имени. Игрок получит их в течение 15 секунд.</div></div>
+  <div class="admin-section"><h4>Заявки на проверку заданий</h4><div id="adminQuestQueue"></div><div class="admin-note" style="margin-top:8px;">Заявки этого устройства. Для общей очереди заявок от всех игроков нужно расширить server.py — могу добавить отдельным шагом.</div></div>
+  <div class="admin-section"><h4>Мониторинг игроков</h4><div class="admin-kpi-grid"><div class="admin-kpi"><div class="k">Игроков всего</div><div class="v" id="adminTotalPlayers">0</div></div><div class="admin-kpi"><div class="k">Онлайн сейчас</div><div class="v" id="adminOnlinePlayers">0</div></div><div class="admin-kpi"><div class="k">Всего игр</div><div class="v" id="adminTotalGames">0</div></div><div class="admin-kpi"><div class="k">Оборот ставок</div><div class="v" id="adminTotalWagered">◆0</div></div></div><div class="admin-tabs"><button class="admin-tab active" data-admin-view="players">Игроки</button><button class="admin-tab" data-admin-view="balance">Топ баланса</button><button class="admin-tab" data-admin-view="games">Топ игр</button></div><div class="admin-scroll"><div id="adminPlayersTable"></div></div></div>
+  <div class="admin-section"><h4>Статистика текущего игрока</h4><div id="adminStatsBlock"></div></div>
+  <div class="admin-section"><h4>Бан / ограничение</h4><div class="admin-give-form"><input type="text" id="adminBanTarget" placeholder="Имя игрока"><input type="number" id="adminBanMinutes" placeholder="Минуты" style="max-width:100px;"><button id="adminBanBtn">Бан</button></div><div class="admin-note">Работает при подключённом сервере (0 минут = навсегда).</div></div>
+  <div class="admin-section"><button class="secondary-btn" id="adminLogoutBtn" style="width:100%;">Выйти из админ-панели</button></div>
 </div>
 
 <script>
 (function(){
   // --- КОНФИГУРАЦИЯ ---
-  const API_BASE_URL = 'https://jager-casino.onrender.com';
+  const API_BASE_URL = 'https://jager-casino.onrender.com'; // Вставь сюда свой адрес Render БЕЗ слэша в конце!
   const START_BALANCE = 5000;
   
-  // --- СОСТОЯНИЕ ---
   let balance = START_BALANCE;
   let stats = { games:0, wins:0, losses:0, totalWin:0, totalLose:0, bestWin:0, streak:0, totalWagered:0 };
   let session = null; // { token, name }
   let adminToken = sessionStorage.getItem('jager_admin_token');
 
-  // --- TELEGRAM WEBAPP ---
   const tg = window.Telegram?.WebApp;
   let tgUser = null;
-  if(tg) {
-    tg.ready();
-    tg.expand();
-    tgUser = tg.initDataUnsafe?.user;
-  }
+  if(tg) { try { tg.ready(); tg.expand(); tgUser = tg.initDataUnsafe?.user; } catch(e){} }
+  const userKey = tgUser?.id ? ('jager_profile_' + tgUser.id) : 'jager_profile_guest';
 
-  // --- DOM ЭЛЕМЕНТЫ ---
   const $ = id => document.getElementById(id);
   const fmt = n => Math.round(n).toLocaleString('ru-RU');
 
   function toast(msg) {
-    // Простая реализация тоста, если у тебя есть своя - замени
-    console.log(msg);
-    alert(msg); // Временно для отладки
+    const t = $('toast'); if(!t) return;
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('show'), 2400);
   }
 
-  function renderBalance() {
-    const el = $('balanceDisplay');
-    if(el) el.textContent = fmt(balance);
-  }
+  function renderBalance() { const el = $('balanceDisplay'); if(el) el.textContent = fmt(balance); }
 
-  // --- API ФУНКЦИИ ---
+  // --- API ---
   async function apiRegister(name, password) {
-    const res = await fetch(API_BASE_URL + '/api/register', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name, password, tg_id: tgUser?.id })
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.detail);
+    const res = await fetch(API_BASE_URL + '/api/register', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, password, tg_id: tgUser?.id}) });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.detail || 'Ошибка регистрации');
     return data;
   }
 
   async function apiSync() {
     if(!session) return;
     try {
-      const res = await fetch(API_BASE_URL + '/api/sync', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          token: session.token, balance, ...stats
-        })
-      });
-      const data = await res.json();
-      if(res.ok && data.balance !== undefined) {
-        // Если сервер вернул баланс больше (админ начислил), обновляем
+      const res = await fetch(API_BASE_URL + '/api/sync', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: session.token, balance, ...stats }) });
+      const data = await res.json().catch(()=>({}));
+      if(res.ok && typeof data.balance === 'number') {
         if(data.balance > balance) {
-          const diff = data.balance - balance;
-          balance = data.balance;
-          renderBalance();
-          saveProfile();
+          balance = data.balance; renderBalance(); saveProfile();
           if(data.credited > 0) toast(`💎 Админ начислил вам ${fmt(data.credited)} фишек!`);
-        } else {
-          // Просто синхронизируем (сервер принял наши данные)
-          balance = data.balance; 
-          renderBalance();
-        }
+        } else { balance = data.balance; renderBalance(); }
       }
     } catch(e) { console.error('Sync error', e); }
   }
 
   async function apiAdminLogin(password) {
-    const res = await fetch(API_BASE_URL + '/api/admin/login', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ password })
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.detail);
+    const res = await fetch(API_BASE_URL + '/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password}) });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.detail || 'Неверный пароль');
     return data.token;
   }
 
-  async function apiAdminGive(targetName, amount) {
-    if(!adminToken) throw new Error('Нет прав админа');
-    const res = await fetch(API_BASE_URL + '/api/admin/give', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ admin_token: adminToken, name: targetName, amount })
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.detail);
-    return data;
+  function apiActivity(text) {
+    if(!session) return;
+    fetch(API_BASE_URL + '/api/activity', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({token: session.token, activity: text}) }).catch(()=>{});
   }
 
-  async function apiAdminGetPlayers() {
-    if(!adminToken) throw new Error('Нет прав');
-    const res = await fetch(`${API_BASE_URL}/api/admin/players?admin_token=${adminToken}`);
-    if(!res.ok) throw new Error('Ошибка получения игроков');
-    return res.json();
-  }
-
-  // --- ЛОГИКА ИГРЫ (Упрощенная для примера) ---
-  function changeBalance(delta) {
-    balance += delta;
-    if(balance < 0) balance = 0;
-    renderBalance();
-    saveProfile();
-    apiSync(); // Отправляем на сервер сразу
-  }
-
-  function recordGame(bet, win) {
-    stats.games++;
-    stats.totalWagered += bet;
-    if(win > bet) {
-      stats.wins++;
-      stats.totalWin += (win - bet);
-      if((win-bet) > stats.bestWin) stats.bestWin = win - bet;
-    } else {
-      stats.losses++;
-      stats.totalLose += (bet - win); // Упрощенно
-    }
-    saveProfile();
-    apiSync();
-  }
-
-  // --- LOCAL STORAGE ---
-  function saveProfile() {
-    localStorage.setItem('jager_profile', JSON.stringify({ balance, stats, session }));
-  }
-
+  // --- ЛОКАЛЬНОЕ ХРАНИЛИЩЕ ---
+  function saveProfile() { try { localStorage.setItem(userKey, JSON.stringify({ balance, stats, session, updated:Date.now() })); } catch(e){} }
   function loadProfile() {
-    const raw = localStorage.getItem('jager_profile');
-    if(raw) {
-      const data = JSON.parse(raw);
-      balance = data.balance || START_BALANCE;
-      stats = Object.assign(stats, data.stats);
-      session = data.session;
-    }
+    try {
+      const raw = localStorage.getItem(userKey);
+      if(raw) { const d = JSON.parse(raw); balance = d.balance || START_BALANCE; stats = Object.assign(stats, d.stats); session = d.session; }
+    } catch(e) { balance = START_BALANCE; }
     renderBalance();
   }
+  function changeBalance(delta) { balance += delta; if(balance < 0) balance = 0; renderBalance(); saveProfile(); apiSync(); }
 
-  // --- АДМИН ПАНЕЛЬ (UI) ---
-  function openAdminPanel() {
-    // Здесь должна быть логика показа модального окна админки
-    // Для примера используем prompt
-    const target = prompt("Введите имя игрока для начисления:");
-    if(!target) return;
-    const amount = parseInt(prompt("Сумма:"));
-    if(!amount) return;
-    
-    apiAdminGive(target, amount)
-      .then(() => toast(`✅ Игроку ${target} начислено ${amount}. Он получит их при следующем действии.`))
-      .catch(e => toast('❌ Ошибка: ' + e.message));
-      
-    // Обновить список (если есть UI)
-    refreshAdminList();
+  // --- ИГРОВАЯ ЛОГИКА (Восстановлена из твоего старого кода) ---
+  function recordRoundResult(betAmount, payout) {
+    stats.games++; stats.totalWagered += Math.max(0, betAmount);
+    const net = payout - betAmount;
+    if(net > 0) { stats.wins++; stats.streak++; stats.totalWin += net; if(net > stats.bestWin) stats.bestWin = net; } 
+    else { stats.losses++; stats.streak = 0; stats.totalLose += Math.abs(net); }
+    renderProfile(); saveProfile(); apiSync();
   }
 
-  async function refreshAdminList() {
+  // Мины
+  const MINES_TOTAL = 25; let minesState = null;
+  function minesMultiplier(mines, revealed) { let mult = 1, safe = MINES_TOTAL - mines; for(let i=0;i<revealed;i++) mult *= (MINES_TOTAL - i) / (safe - i); return mult * 0.95; }
+  function buildMinesGrid() { const g = $('minesGrid'); if(!g) return; g.innerHTML=''; for(let i=0;i<MINES_TOTAL;i++){ const c=document.createElement('div'); c.className='mine-cell'; c.dataset.idx=i; c.onclick=onMineCellClick; g.appendChild(c); } }
+  buildMinesGrid();
+  $('minesMinus').onclick = () => { let n=parseInt($('minesCount').textContent); if(n>1) $('minesCount').textContent=n-1; };
+  $('minesPlus').onclick = () => { let n=parseInt($('minesCount').textContent); if(n<24) $('minesCount').textContent=n+1; };
+  $('minesStartBtn').onclick = () => {
+    const bet = parseInt($('minesBet').value); if(bet<=0||bet>balance) return toast('Недостаточно фишек');
+    changeBalance(-bet); const mc = parseInt($('minesCount').textContent); const mp = new Set(); while(mp.size<mc) mp.add(Math.floor(Math.random()*MINES_TOTAL));
+    minesState = {bet, mc, mp, rev:0, active:true};
+    document.querySelectorAll('.mine-cell').forEach(c=>{c.className='mine-cell';c.textContent='';});
+    $('minesResult').className='result-msg'; $('minesMultDisplay').textContent='x1.00';
+    $('minesStartBtn').style.display='none'; $('minesCashoutBtn').style.display='block'; $('minesCashoutBtn').textContent='Забрать выигрыш';
+  };
+  function onMineCellClick(e) {
+    if(!minesState||!minesState.active) return; const idx=parseInt(e.currentTarget.dataset.idx), c=e.currentTarget;
+    if(c.classList.contains('revealed-safe')||c.classList.contains('revealed-mine')) return;
+    if(minesState.mp.has(idx)) { c.classList.add('revealed-mine'); c.textContent='💥'; minesState.active=false; revealAllMines(); $('minesResult').className='result-msg lose'; $('minesResult').textContent='Взрыв! Потеряно '+fmt(minesState.bet); recordRoundResult(minesState.bet, 0); endMines(); }
+    else { minesState.rev++; c.classList.add('revealed-safe'); c.textContent='💎'; const m=minesMultiplier(minesState.mc, minesState.rev); $('minesMultDisplay').textContent='x'+m.toFixed(2); $('minesCashoutBtn').textContent='Забрать '+fmt(minesState.bet*m); if(minesState.rev===MINES_TOTAL-minesState.mc) cashoutMines(); }
+  }
+  function revealAllMines() { document.querySelectorAll('.mine-cell').forEach(c=>{ const i=parseInt(c.dataset.idx); c.classList.add('locked'); if(minesState.mp.has(i)&&!c.classList.contains('revealed-mine')){c.classList.add('revealed-mine');c.textContent='💣';} }); }
+  function cashoutMines() { if(!minesState||!minesState.active) return; const m=minesMultiplier(minesState.mc, minesState.rev), w=minesState.bet*m; minesState.active=false; changeBalance(w); $('minesResult').className='result-msg win'; $('minesResult').textContent='Выигрыш '+fmt(w)+' (x'+m.toFixed(2)+')'; recordRoundResult(minesState.bet, w); revealAllMines(); endMines(); }
+  $('minesCashoutBtn').onclick = () => { if(minesState&&minesState.active&&minesState.rev>0) cashoutMines(); else toast('Откройте клетку'); };
+  function endMines() { $('minesCashoutBtn').style.display='none'; $('minesStartBtn').style.display='block'; }
+
+  // Рулетка
+  const wheelSegments = [{mult:0,color:'#241a45',w:76},{mult:1.2,color:'#3d2678',w:25},{mult:1.5,color:'#6a35b0',w:18},{mult:2,color:'#9257ff',w:14},{mult:3,color:'#c231d9',w:8},{mult:5,color:'#f5479c',w:4},{mult:10,color:'#ffc94a',w:1}];
+  const totalW = wheelSegments.reduce((s,x)=>s+x.w,0); let wheelRot=0, spinning=false;
+  function buildWheel() { let a=0,p=[]; wheelSegments.forEach(s=>{const st=a/totalW*360;a+=s.w;const en=a/totalW*360;p.push(s.color+' '+st.toFixed(2)+'deg '+en.toFixed(2)+'deg');}); $('wheel').style.background='conic-gradient('+p.join(',')+')'; const l=$('wheelLegend'); l.innerHTML=''; wheelSegments.forEach(s=>{const d=document.createElement('div');d.className='mult-pill';d.style.color=s.color==='#241a45'?'var(--muted)':s.color;d.textContent='x'+s.mult;l.appendChild(d);}); }
+  buildWheel();
+  $('rouletteSpinBtn').onclick = () => {
+    if(spinning) return; const bet=parseInt($('rouletteBet').value); if(bet<=0||bet>balance) return toast('Недостаточно фишек');
+    changeBalance(-bet); spinning=true; $('rouletteSpinBtn').disabled=true; $('wheelCenter').textContent='...'; $('rouletteResult').className='result-msg';
+    let r=Math.random()*totalW, a=0, ch=wheelSegments[0], ci=0; for(let i=0;i<wheelSegments.length;i++){a+=wheelSegments[i].w;if(r<=a){ch=wheelSegments[i];ci=i;break;}}
+    const sw=wheelSegments.slice(0,ci).reduce((s,x)=>s+x.w,0), td=sw/totalW*360+(ch.w/totalW*360)*0.5;
+    wheelRot = wheelRot - (wheelRot%360) + (5+Math.floor(Math.random()*2))*360 + (360-td);
+    $('wheel').style.transform='rotate('+wheelRot+'deg)';
+    setTimeout(()=>{ spinning=false; $('rouletteSpinBtn').disabled=false; $('wheelCenter').textContent='x'+ch.mult; const w=bet*ch.mult; if(ch.mult>0){changeBalance(w);$('rouletteResult').className='result-msg win';$('rouletteResult').textContent='Выпало x'+ch.mult+' — выигрыш '+fmt(w);recordRoundResult(bet,w);}else{$('rouletteResult').className='result-msg lose';$('rouletteResult').textContent='Выпало x0 — ставка сгорела';recordRoundResult(bet,0);} }, 4300);
+  };
+
+  // Апгрейд
+  let upgNeedleRot=0;
+  function updateUpgradeUI() { const b=parseInt($('upgradeBet').value)||0, m=parseInt($('upgradeMultSlider').value)/10, c=Math.min(95,Math.max(1,95/m)); $('upgradeMultLabel').textContent='x'+m.toFixed(2); $('upgradeChanceLabel').textContent=c.toFixed(0)+'%'; $('upgradeFromVal').textContent='◆'+fmt(b); $('upgradeToVal').textContent='◆'+fmt(b*m); $('upgradeGauge').style.background=`conic-gradient(var(--green) 0deg ${c/100*360}deg, var(--red) ${c/100*360}deg 360deg)`; $('upgradeGaugeCenter').textContent=c.toFixed(0)+'%'; }
+  $('upgradeBet').oninput = updateUpgradeUI; $('upgradeMultSlider').oninput = updateUpgradeUI; updateUpgradeUI();
+  $('upgradeGoBtn').onclick = () => {
+    const b=parseInt($('upgradeBet').value); if(b<=0||b>balance) return toast('Недостаточно фишек');
+    const m=parseInt($('upgradeMultSlider').value)/10, c=Math.min(95,Math.max(1,95/m)), cd=c/100*360, roll=Math.random()*100, succ=roll<=c;
+    const td=succ?cd*0.5:cd+(360-cd)*0.5; changeBalance(-b); $('upgradeGoBtn').disabled=true; $('upgradeResult').className='result-msg';
+    upgNeedleRot = upgNeedleRot - (upgNeedleRot%360) + (3+Math.floor(Math.random()*2))*360 + td;
+    $('upgradeNeedle').style.transform=`translate(-50%,-100%) rotate(${upgNeedleRot}deg)`;
+    setTimeout(()=>{ $('upgradeGoBtn').disabled=false; if(succ){const w=b*m;changeBalance(w);$('upgradeResult').className='result-msg win';$('upgradeResult').textContent='Успех! Получено '+fmt(w);recordRoundResult(b,w);}else{$('upgradeResult').className='result-msg lose';$('upgradeResult').textContent='Неудача — потеряно '+fmt(b);recordRoundResult(b,0);} }, 2700);
+  };
+
+  // Ракета
+  let rInt=null, rCInt=null, rMult=1, rCrash=1, rAct=false, rBet=0, rPend=false;
+  function randCrash() { return Math.max(1.01, Math.min(0.95/(1-Math.random()), 50)); }
+  function resetRocket() { $('rocketEmoji').style.left='8%'; $('rocketEmoji').style.bottom='14px'; $('rocketEmoji').textContent=''; $('rocketMultDisplay').textContent='1.00x'; $('rocketMultDisplay').style.color='var(--text)'; $('rocketTrail').style.height='0%'; $('rocketPath').setAttribute('points','0,220'); }
+  function finishRocketLoss() { rAct=false; rPend=false; clearInterval(rInt); clearInterval(rCInt); $('rocketMultDisplay').textContent=rCrash.toFixed(2)+'x'; $('rocketMultDisplay').style.color='var(--red)'; $('rocketEmoji').style.left='92%'; $('rocketEmoji').textContent='💥'; $('rocketStatus').textContent='Взрыв на '+rCrash.toFixed(2)+'x'; $('rocketResult').className='result-msg lose'; $('rocketResult').textContent='Не успели забрать — потеряно '+fmt(rBet); recordRoundResult(rBet, 0); $('rocketCashoutBtn').style.display='none'; $('rocketLaunchBtn').style.display='block'; setTimeout(resetRocket, 1400); }
+  function startRocketFlight() { rPend=false; rAct=true; rCrash=randCrash(); $('rocketStatus').textContent='В полёте...'; $('rocketCashoutBtn').style.display='block'; const st=Date.now(), pts=['0,220']; rInt=setInterval(()=>{ const t=(Date.now()-st)/1000; rMult=1+Math.pow(t,1.55)*0.22; if(rMult>=rCrash){finishRocketLoss();return;} $('rocketMultDisplay').textContent=rMult.toFixed(2)+'x'; $('rocketMultDisplay').style.color=rMult>=2?'var(--gold)':'var(--text)'; $('rocketCashoutBtn').textContent='Забрать '+fmt(rBet*rMult); const h=Math.min(90,(rMult-1)*18), w=Math.min(88,8+t*14); $('rocketEmoji').style.left=w+'%'; $('rocketEmoji').style.bottom=(14+h*2)+'px'; $('rocketTrail').style.height=h+'%'; pts.push((w/100*300).toFixed(1)+','+(220-h/100*220).toFixed(1)); if(pts.length>60)pts.shift(); $('rocketPath').setAttribute('points',pts.join(' ')); $('rocketPath').style.stroke=rMult>=2?'#ffc94a':'#33c7ff'; }, 60); }
+  $('rocketLaunchBtn').onclick = () => { if(rAct||rPend) return; const b=parseInt($('rocketBet').value); if(b<=0||b>balance) return toast('Недостаточно фишек'); changeBalance(-b); rBet=b; rMult=1; rPend=true; rAct=false; $('rocketResult').className='result-msg'; $('rocketLaunchBtn').style.display='none'; $('rocketCashoutBtn').style.display='none'; $('rocketStatus').textContent='Ставка принята. Подготовка старта...'; let s=30; $('rocketCountdown')&&($('rocketCountdown').textContent='🚀 Старт через '+s+' сек'); clearInterval(rCInt); rCInt=setInterval(()=>{ s--; if($('rocketCountdown'))$('rocketCountdown').textContent='🚀 Старт через '+s+' сек'; if(s<=0){clearInterval(rCInt);startRocketFlight();} }, 1000); };
+  $('rocketCashoutBtn').onclick = () => { if(!rAct) return; clearInterval(rInt); rAct=false; const w=rBet*rMult; changeBalance(w); $('rocketResult').className='result-msg win'; $('rocketResult').textContent='Забрано '+fmt(w)+' (x'+rMult.toFixed(2)+')'; recordRoundResult(rBet, w); $('rocketStatus').textContent='Успешный вывод на '+rMult.toFixed(2)+'x'; $('rocketCashoutBtn').style.display='none'; $('rocketLaunchBtn').style.display='block'; setTimeout(resetRocket, 1400); };
+
+  // Лесенка
+  const L_LVL=6, L_CELLS=3, L_MINES=1; let ladState=null;
+  function ladMult(lvl) { return Math.pow(L_CELLS/(L_CELLS-L_MINES), lvl)*0.95; }
+  function renderLadLevels() { const w=$('ladderLevels'); if(!w)return; w.innerHTML=''; for(let i=1;i<=L_LVL;i++){const r=document.createElement('div');r.className='ladder-level-row';r.id='ladLvl'+i;r.innerHTML='<span>Уровень '+i+'</span><b>x'+ladMult(i).toFixed(2)+'</b>';w.appendChild(r);} }
+  renderLadLevels();
+  function updateLadStyles() { for(let i=1;i<=L_LVL;i++){const r=$('ladLvl'+i);if(r)r.className='ladder-level-row'+(ladState&&i<=ladState.lvl?' passed':'')+(ladState&&ladState.act&&i===ladState.lvl+1?' current':'');} }
+  function buildLadRow() { const r=$('ladderRow'); if(!r)return; r.innerHTML=''; for(let i=0;i<L_CELLS;i++){const c=document.createElement('div');c.className='ladder-cell';c.dataset.idx=i;c.textContent='❔';c.onclick=onLadCellClick;r.appendChild(c);} }
+  buildLadRow();
+  $('ladderStartBtn').onclick = () => { const b=parseInt($('ladderBet').value); if(b<=0||b>balance) return toast('Недостаточно фишек'); changeBalance(-b); ladState={bet:b,lvl:0,act:true}; document.querySelectorAll('.ladder-cell').forEach(c=>{c.className='ladder-cell';c.textContent='❔';}); $('ladderResult').className='result-msg'; $('ladderMultDisplay').textContent='x1.00'; $('ladderStartBtn').style.display='none'; $('ladderCashoutBtn').style.display='block'; updateLadStyles(); };
+  function onLadCellClick(e) { if(!ladState||!ladState.act) return; const cells=document.querySelectorAll('.ladder-cell'), mp=Math.floor(Math.random()*L_CELLS), idx=parseInt(e.currentTarget.dataset.idx); cells.forEach(c=>c.classList.add('locked')); if(idx===mp){e.currentTarget.classList.add('mine');e.currentTarget.textContent='💣';cells.forEach((c,i)=>{if(i!==idx){c.textContent='🟩';c.classList.add('safe');}});ladState.act=false;$('ladderResult').className='result-msg lose';$('ladderResult').textContent='Мина! Потеряно '+fmt(ladState.bet);recordRoundResult(ladState.bet,0);endLad();}else{e.currentTarget.classList.add('safe');e.currentTarget.textContent='💎';ladState.lvl++;const m=ladMult(ladState.lvl);$('ladderMultDisplay').textContent='x'+m.toFixed(2);$('ladderCashoutBtn').textContent='Забрать '+fmt(ladState.bet*m);updateLadStyles();if(ladState.lvl>=L_LVL)cashoutLad();else setTimeout(buildLadRow,550);} }
+  function cashoutLad() { if(!ladState||!ladState.act) return; const m=ladMult(ladState.lvl), w=ladState.bet*m; ladState.act=false; changeBalance(w); $('ladderResult').className='result-msg win'; $('ladderResult').textContent='Выигрыш '+fmt(w)+' (x'+m.toFixed(2)+')'; recordRoundResult(ladState.bet, w); endLad(); }
+  $('ladderCashoutBtn').onclick = () => { if(ladState&&ladState.act&&ladState.lvl>0) cashoutLad(); else toast('Сделайте шаг'); };
+  function endLad() { $('ladderCashoutBtn').style.display='none'; $('ladderStartBtn').style.display='block'; }
+
+  // PvP
+  let pvpBusy=false, pvpInt=null, pvpTO=null, pvpBet=0;
+  $('pvpFindBtn').onclick = () => { if(pvpBusy) return; const b=parseInt($('pvpBet').value); if(b<=0||b>balance) return toast('Недостаточно фишек'); pvpBusy=true; pvpBet=b; changeBalance(-b); $('pvpFindBtn').style.display='none'; $('pvpCancelBtn').style.display='block'; $('pvpWaitTrack').style.display='block'; $('pvpWaitFill').style.width='100%'; $('pvpResultCard').className='pvp-result-card'; $('pvpP1Bet').textContent='◆'+fmt(b); let s=20; $('pvpStatus').textContent='Ищем соперника... '+s+' сек'; const mt=3+Math.random()*17; pvpInt=setInterval(()=>{s--;$('pvpWaitFill').style.width=Math.max(0,s/20*100)+'%';if(s>0)$('pvpStatus').textContent='Ищем соперника... '+s+' сек';if(s<=0)clearInterval(pvpInt);},1000); pvpTO=setTimeout(()=>{clearInterval(pvpInt);startPvp(b, Math.max(10,Math.round(b*(0.5+Math.random()*1.3))));}, mt*1000); };
+  $('pvpCancelBtn').onclick = () => { if(!pvpBusy) return; clearInterval(pvpInt); clearTimeout(pvpTO); changeBalance(pvpBet); toast('Соперник не найден — ставка возвращена'); pvpReset(); };
+  function startPvp(b, ob) { const p1=Math.round(b/(b+ob)*1000)/10, p2=100-p1; $('pvpWaitTrack').style.display='none'; $('pvpCancelBtn').style.display='none'; $('pvpP1Bet').textContent='◆'+fmt(b); $('pvpP2Bet').textContent='◆'+fmt(ob); $('pvpP1Pct').textContent=p1+'%'; $('pvpP2Pct').textContent=p2+'%'; $('pvpBarP1').style.width=p1+'%'; $('pvpBarP2').style.width=p2+'%'; $('pvpStatus').textContent='Соперник найден! Бой начинается...'; setTimeout(()=>{ const win=Math.random()*100<=p1, bank=b+ob, pay=bank*0.95; $('pvpResultCard').className='pvp-result-card show '+(win?'win':'lose'); if(win){changeBalance(pay);$('pvpResultBig').textContent='🏆 Победа!';$('pvpResultSmall').textContent='Банк '+fmt(bank)+' минус 5% = получено '+fmt(pay);recordRoundResult(b,pay);}else{$('pvpResultBig').textContent='💥 Поражение';$('pvpResultSmall').textContent='Соперник забрал банк — потеряно '+fmt(b);recordRoundResult(b,0);} $('pvpStatus').textContent='Матч завершён'; $('pvpFindBtn').style.display='block'; pvpBusy=false; }, 1600); }
+  function pvpReset() { clearInterval(pvpInt); clearTimeout(pvpTO); $('pvpWaitTrack').style.display='none'; $('pvpCancelBtn').style.display='none'; $('pvpFindBtn').style.display='block'; $('pvpStatus').textContent='Сделай ставку, чтобы найти соперника'; $('pvpP1Bet').textContent='◆0'; $('pvpP2Bet').textContent='◆0'; $('pvpP1Pct').textContent='50%'; $('pvpP2Pct').textContent='50%'; $('pvpBarP1').style.width='50%'; $('pvpBarP2').style.width='50%'; pvpBusy=false; }
+
+  // --- НАВИГАЦИЯ И UI ---
+  const screens = document.querySelectorAll('.screen');
+  const navItems = document.querySelectorAll('.nav-item');
+  const tabMap = {pvp:'pvp', solo:'solo', giveaways:'giveaways', shop:'shop', referrals:'referrals', profile:'profile'};
+  function showScreen(id) { screens.forEach(s=>s.classList.remove('active')); const el=$('screen-'+id); if(el)el.classList.add('active'); apiActivity(id==='solo'?'В меню':'Экран: '+id); }
+  navItems.forEach(n => n.onclick = () => { navItems.forEach(x=>x.classList.remove('active')); n.classList.add('active'); showScreen(tabMap[n.dataset.tab]||'solo'); });
+  document.querySelectorAll('.game-card').forEach(c => c.onclick = () => showScreen(c.dataset.game));
+  document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => showScreen('solo'));
+  document.querySelectorAll('[data-half]').forEach(b => b.onclick = () => { const i=$(b.dataset.half); i.value=Math.max(1,Math.floor(i.value/2)); });
+  document.querySelectorAll('[data-double]').forEach(b => b.onclick = () => { const i=$(b.dataset.double); i.value=Math.max(1,Math.floor(i.value*2)); });
+
+  function renderProfile() {
+    const set=(id,v)=>{const e=$(id);if(e)e.textContent=v;};
+    set('statGames',stats.games); set('statWins',stats.wins); set('statLosses',stats.losses);
+    set('statWinrate', stats.games>0?Math.round(stats.wins/stats.games*100)+'%':'0%');
+    set('statTotalWin','◆'+fmt(stats.totalWin)); set('statTotalLose','◆'+fmt(stats.totalLose));
+    set('statBestWin','◆'+fmt(stats.bestWin)); set('statStreak',stats.streak); set('statWagered','◆'+fmt(stats.totalWagered));
+  }
+
+  // --- АДМИНКА ---
+  let menuClicks = 0;
+  $('menuBtn').onclick = () => { menuClicks++; setTimeout(()=>menuClicks=0, 1500); if(menuClicks>=5){ menuClicks=0; $('adminLoginOverlay').classList.add('show'); $('adminPasswordInput').value=''; $('adminPasswordInput').focus(); } else toast('JAGER · игровая валюта без реальной стоимости'); };
+  $('closeBtn').onclick = () => { if(tg) tg.close(); else toast('Закрытие доступно внутри Telegram'); };
+  
+  $('adminLoginBtn').onclick = async () => {
+    const val = $('adminPasswordInput').value; if(!val) return toast('Введите пароль');
+    try { const tk = await apiAdminLogin(val); adminToken = tk; sessionStorage.setItem('jager_admin_token', tk); $('adminLoginOverlay').classList.remove('show'); openAdminPanel(); toast('Вход выполнен'); } catch(e) { toast('Неверный пароль'); }
+  };
+  $('adminPasswordInput').onkeydown = e => { if(e.key==='Enter') $('adminLoginBtn').click(); };
+
+  function openAdminPanel() { if(!adminToken) return; renderAdminPanel(); $('adminScreen').classList.add('show'); clearInterval(window.admPoll); window.admPoll = setInterval(()=>renderAdminPlayers($('adminTabActive')?.dataset.adminView||'players'), 5000); }
+  $('adminCloseBtn').onclick = () => { $('adminScreen').classList.remove('show'); clearInterval(window.admPoll); };
+  $('adminLogoutBtn').onclick = () => { adminToken=null; sessionStorage.removeItem('jager_admin_token'); $('adminScreen').classList.remove('show'); clearInterval(window.admPoll); toast('Выход выполнен'); };
+
+  async function renderAdminPlayers(view='players') {
+    if(!adminToken) return;
     try {
-      const data = await apiAdminGetPlayers();
-      console.log("Игроки онлайн:", data.online_now, "Всего:", data.total_players);
-      // Здесь можно отрисовать таблицу в HTML
-    } catch(e) { console.error(e); }
+      const res = await fetch(`${API_BASE_URL}/api/admin/players?admin_token=${adminToken}&sort=${view}`);
+      if(res.status===403) { adminToken=null; sessionStorage.removeItem('jager_admin_token'); $('adminScreen').classList.remove('show'); return; }
+      const d = await res.json();
+      $('adminTotalPlayers').textContent=d.total_players; $('adminOnlinePlayers').textContent=d.online_now; $('adminTotalGames').textContent=d.total_games; $('adminTotalWagered').textContent='◆'+fmt(d.total_wagered);
+      let h='<table class="admin-table"><thead><tr><th>#</th><th>Игрок</th><th>Сейчас</th><th>Баланс</th><th>Игр</th><th>Побед</th><th>Статус</th></tr></thead><tbody>';
+      d.players.forEach((p,i)=>{ h+=`<tr><td>${i+1}</td><td>${p.online?'<span class="admin-online-dot"></span>':''}${p.name}</td><td class="admin-muted">${p.activity}</td><td>◆${fmt(p.balance)}</td><td>${p.games}</td><td>${p.wins}</td><td>${p.banned?'🔒':'✅'}</td></tr>`; });
+      $('adminPlayersTable').innerHTML=h+'</tbody></table>';
+    } catch(e) { $('adminPlayersTable').innerHTML='<div class="admin-note">Сервер недоступен</div>'; }
   }
 
-  // --- ИНИЦИАЛИЗАЦИЯ ---
-  async function init() {
-    loadProfile();
-    
-    // Если нет сессии, показываем регистрацию (упрощенно)
-    if(!session) {
-      const name = prompt("Введите имя для входа в казино:");
-      const pass = prompt("Введите пароль:");
-      if(name && pass) {
-        try {
-          const data = await apiRegister(name, pass);
-          session = { token: data.token, name: data.name };
-          balance = data.balance;
-          saveProfile();
-          renderBalance();
-          toast(`Добро пожаловать, ${name}!`);
-        } catch(e) { toast('Ошибка входа: ' + e.message); }
-      }
-    } else {
-      // Если есть сессия, сразу синхронизируемся
-      apiSync();
-    }
-
-    // Авто-синхронизация каждые 15 секунд (чтобы получать начисления админа)
-    setInterval(apiSync, 15000);
-
-    // Кнопка админки (5 кликов по меню или спец кнопка)
-    // В твоем HTML найди кнопку меню и добавь логику
-    let menuClicks = 0;
-    const menuBtn = $('menuBtn'); // Убедись что такой ID есть в HTML
-    if(menuBtn) {
-      menuBtn.addEventListener('click', () => {
-        menuClicks++;
-        setTimeout(() => menuClicks = 0, 2000);
-        if(menuClicks >= 5) {
-          const pass = prompt("Пароль администратора:");
-          if(pass) {
-            apiAdminLogin(pass).then(token => {
-              adminToken = token;
-              sessionStorage.setItem('jager_admin_token', token);
-              toast('🔓 Вход в админку выполнен');
-              openAdminPanel(); // Открываем панель
-            }).catch(() => toast('Неверный пароль'));
-          }
-          menuClicks = 0;
-        }
-      });
-    }
+  function renderAdminPanel() {
+    const q=$('adminQuestQueue'); q.innerHTML='<div class="admin-note">Заявок на проверку нет (локально)</div>';
+    const s=$('adminStatsBlock'); s.innerHTML=`<div class="admin-row"><span>ID</span><b>${tgUser?tgUser.id:'—'}</b></div><div class="admin-row"><span>Баланс</span><b>◆${fmt(balance)}</b></div><div class="admin-row"><span>Игр сыграно</span><b>${stats.games}</b></div>`;
+    renderAdminPlayers('players');
+    document.querySelectorAll('.admin-tab').forEach(t=>{ t.onclick=()=>{ document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); t.id='adminTabActive'; renderAdminPlayers(t.dataset.adminView); }; });
   }
 
-  // Запуск
-  if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  $('adminGiveBtn').onclick = async () => {
+    const target=$('adminGiveTarget').value.trim(), amt=parseInt($('adminGiveAmount').value);
+    if(!target||!amt) return toast('Укажите имя и сумму'); if(!adminToken) return toast('Нет прав');
+    try {
+      const res = await fetch(API_BASE_URL+'/api/admin/give', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({admin_token:adminToken, name:target, amount:amt}) });
+      const d = await res.json(); if(!res.ok) throw new Error(d.detail);
+      toast(`Игроку ${target} начислено ◆${fmt(amt)}. Он получит их в течение 15 сек.`);
+      $('adminGiveTarget').value=''; $('adminGiveAmount').value=''; renderAdminPlayers($('adminTabActive')?.dataset.adminView||'players');
+    } catch(e) { toast('Ошибка: '+e.message); }
+  };
 
-  // Экспорт функций для кнопок в HTML (если нужно)
-  window.changeBalance = changeBalance;
-  window.recordGame = recordGame;
-  window.openAdminPanel = openAdminPanel;
+  $('adminBanBtn').onclick = async () => {
+    const target=$('adminBanTarget').value.trim(), mins=parseInt($('adminBanMinutes').value);
+    if(!target||isNaN(mins)) return toast('Укажите имя и минуты'); if(!adminToken) return toast('Нет прав');
+    try {
+      const res = await fetch(API_BASE_URL+'/api/admin/ban', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({admin_token:adminToken, name:target, minutes:mins}) });
+      if(!res.ok) throw new Error((await res.json()).detail);
+      toast(`Игрок ${target} забанен`); renderAdminPlayers($('adminTabActive')?.dataset.adminView||'players');
+    } catch(e) { toast('Ошибка: '+e.message); }
+  };
+
+  // --- ЗАПУСК ---
+  loadProfile();
+  if(!session) { $('regOverlay').classList.add('show'); } else { apiSync(); }
+  setInterval(()=>{ if(session) apiSync(); }, 15000); // Авто-синхронизация каждые 15 сек
+
+  $('regSubmitBtn').onclick = async () => {
+    const name=$('regNameInput').value.trim(), pass=$('regPasswordInput').value;
+    if(name.length<2||pass.length<4) return $('regError').textContent='Имя от 2, пароль от 4 символов';
+    try { const d=await apiRegister(name,pass); session={token:d.token,name:d.name}; balance=d.balance; saveProfile(); renderBalance(); $('regOverlay').classList.remove('show'); toast('Добро пожаловать, '+name+'!'); apiActivity('В меню'); } catch(e) { $('regError').textContent=e.message; }
+  };
 
 })();
 </script>
