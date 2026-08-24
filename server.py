@@ -1,34 +1,37 @@
+import os
+import time
+import sqlite3
+import secrets
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import uvicorn
-import time
-import sqlite3
-import threading
-from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+# CORS для всех (для Telegram WebApp и сайта)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"], 
-    allow_headers=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 # --- НАСТРОЙКИ ---
-ADMIN_PASSWORD = "jager-admin-2026"
+ADMIN_PASSWORD = "jager-admin-2026" # Смени на свой!
 START_BALANCE = 5000
 DB_NAME = "jager_database.db"
 
-# --- РАБОТА С БАЗОЙ ДАННЫХ ---
 def get_db():
     conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row # Чтобы обращаться к колонкам по имени
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
-    # Создаем таблицу игроков, если её нет
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS players (
             name TEXT PRIMARY KEY,
@@ -44,16 +47,21 @@ def init_db():
             best_win INTEGER DEFAULT 0,
             last_seen REAL DEFAULT 0,
             activity TEXT DEFAULT 'В меню',
-            banned INTEGER DEFAULT 0
+            banned INTEGER DEFAULT 0,
+            pending_credits INTEGER DEFAULT 0
         )
     ''')
-    conn.commit()
+    # Миграция: добавляем колонку, если её нет
+    try:
+        cursor.execute("ALTER TABLE players ADD COLUMN pending_credits INTEGER DEFAULT 0")
+        conn.commit()
+    except:
+        pass
     conn.close()
 
-# Инициализируем базу при старте
 init_db()
 
-# --- МОДЕЛИ ЗАПРОСОВ ---
+# --- МОДЕЛИ ---
 class RegisterRequest(BaseModel):
     name: str
     password: str
@@ -73,43 +81,47 @@ class SyncRequest(BaseModel):
 class AdminAuth(BaseModel):
     password: str
 
-class GiveRequest(AdminAuth):
+class GiveRequest(BaseModel):
+    admin_token: str # Используем токен вместо пароля в теле для безопасности
     name: str
     amount: int
 
-class BanRequest(AdminAuth):
+class BanRequest(BaseModel):
+    admin_token: str
     name: str
     minutes: int
 
-# --- API ДЛЯ ИГРЫ ---
+# Хранилище админ-сессий
+admin_sessions = {}
+
+def verify_admin(token: str):
+    exp = admin_sessions.get(token)
+    if not exp or exp < time.time():
+        return False
+    return True
+
+# --- API ИГРОКА ---
 
 @app.post("/api/register")
 async def register(req: RegisterRequest):
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Проверяем, есть ли игрок
     cursor.execute("SELECT * FROM players WHERE name = ?", (req.name,))
     player = cursor.fetchone()
     
     if player:
-        # Игрок существует - просто возвращаем данные
+        if player["password"] != req.password:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Неверный пароль")
         conn.close()
-        return {
-            "token": player["name"], 
-            "name": player["name"], 
-            "balance": player["balance"]
-        }
+        return {"token": player["name"], "name": player["name"], "balance": player["balance"]}
     
-    # Создаем нового игрока в базе
     cursor.execute('''
         INSERT INTO players (name, password, tg_id, balance, last_seen)
         VALUES (?, ?, ?, ?, ?)
     ''', (req.name, req.password, req.tg_id, START_BALANCE, time.time()))
-    
     conn.commit()
     conn.close()
-    
     return {"token": req.name, "name": req.name, "balance": START_BALANCE}
 
 @app.post("/api/sync")
@@ -117,11 +129,25 @@ async def sync(req: SyncRequest):
     conn = get_db()
     cursor = conn.cursor()
     
-    # Обновляем данные игрока в базе
-    # Используем MAX, чтобы не потерять прогресс, если запросы придут не по порядку
+    # Получаем текущие pending_credits (начисления админа)
+    cursor.execute("SELECT pending_credits, balance FROM players WHERE name = ?", (req.token,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Игрок не найден")
+        
+    pending = row["pending_credits"] or 0
+    server_balance = row["balance"]
+    
+    # Новый баланс = то что прислал клиент + то что начислил админ
+    # Но мы не хотим перезаписывать серверный баланс клиентским, если клиент "отстал"
+    # Лучшая стратегия для казино: Сервер хранит правду. Клиент присылает изменения игр.
+    # Для упрощения: принимаем баланс клиента, но ПЛЮСУЕМ pending_credits сверху.
+    new_balance = req.balance + pending
+    
     cursor.execute('''
         UPDATE players SET 
-            balance = MAX(balance, ?),
+            balance = ?,
             games = MAX(games, ?),
             wins = MAX(wins, ?),
             losses = MAX(losses, ?),
@@ -129,17 +155,16 @@ async def sync(req: SyncRequest):
             total_lose = MAX(total_lose, ?),
             total_wagered = MAX(total_wagered, ?),
             best_win = MAX(best_win, ?),
+            pending_credits = 0,
             last_seen = ?
         WHERE name = ?
-    ''', (
-        req.balance, req.games, req.wins, req.losses,
-        req.total_win, req.total_lose, req.total_wagered,
-        req.best_win, time.time(), req.token
-    ))
+    ''', (new_balance, req.games, req.wins, req.losses,
+          req.total_win, req.total_lose, req.total_wagered,
+          req.best_win, time.time(), req.token))
     
     conn.commit()
     conn.close()
-    return {"status": "ok"}
+    return {"status": "ok", "balance": new_balance, "credited": pending}
 
 @app.post("/api/activity")
 async def activity(req: dict):
@@ -152,18 +177,23 @@ async def activity(req: dict):
         conn.close()
     return {"status": "ok"}
 
-# --- АДМИН ПАНЕЛЬ API ---
+# --- АДМИНКА ---
+
+@app.post("/api/admin/login")
+async def admin_login(req: AdminAuth):
+    if req.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Неверный пароль")
+    token = secrets.token_urlsafe(32)
+    admin_sessions[token] = time.time() + 3600 * 24 # 24 часа
+    return {"token": token}
 
 @app.get("/api/admin/players")
-async def get_players(password: str, sort: str = "recent"):
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Неверный пароль")
+async def get_players(admin_token: str, sort: str = "recent"):
+    if not verify_admin(admin_token):
+        raise HTTPException(status_code=403, detail="Не авторизован")
         
     conn = get_db()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
-    # Получаем всех игроков
     cursor.execute("SELECT * FROM players")
     rows = cursor.fetchall()
     
@@ -172,7 +202,7 @@ async def get_players(password: str, sort: str = "recent"):
     total_wagered = 0
     
     for row in rows:
-        is_online = (time.time() - row["last_seen"]) < 120 # Онлайн если был активен 2 мин назад
+        is_online = (time.time() - row["last_seen"]) < 120
         p = {
             "name": row["name"],
             "balance": row["balance"],
@@ -186,14 +216,10 @@ async def get_players(password: str, sort: str = "recent"):
         total_games += row["games"]
         total_wagered += row["total_wagered"]
     
-    # Сортировка
-    if sort == "balance":
-        plist.sort(key=lambda x: x["balance"], reverse=True)
-    elif sort == "games":
-        plist.sort(key=lambda x: x["games"], reverse=True)
+    if sort == "balance": plist.sort(key=lambda x: x["balance"], reverse=True)
+    elif sort == "games": plist.sort(key=lambda x: x["games"], reverse=True)
         
     conn.close()
-    
     return {
         "players": plist,
         "total_players": len(plist),
@@ -204,38 +230,36 @@ async def get_players(password: str, sort: str = "recent"):
 
 @app.post("/api/admin/give")
 async def admin_give(req: GiveRequest):
-    if req.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Неверный пароль")
+    if not verify_admin(req.admin_token):
+        raise HTTPException(status_code=403, detail="Не авторизован")
         
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT balance FROM players WHERE name = ?", (req.name,))
-    player = cursor.fetchone()
+    cursor.execute("SELECT pending_credits FROM players WHERE name = ?", (req.name,))
+    row = cursor.fetchone()
     
-    if not player:
+    if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Игрок не найден")
     
-    new_balance = player["balance"] + req.amount
-    cursor.execute("UPDATE players SET balance = ? WHERE name = ?", (new_balance, req.name))
+    # Добавляем в pending, чтобы игрок получил при следующем sync
+    new_pending = (row["pending_credits"] or 0) + req.amount
+    cursor.execute("UPDATE players SET pending_credits = ? WHERE name = ?", (new_pending, req.name))
     conn.commit()
     conn.close()
     
-    return {"status": "ok", "balance": new_balance}
+    return {"status": "ok", "message": "Фишки будут начислены при следующей синхронизации игрока"}
 
 @app.post("/api/admin/ban")
 async def admin_ban(req: BanRequest):
-    if req.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Неверный пароль")
-        
+    if not verify_admin(req.admin_token):
+        raise HTTPException(status_code=403, detail="Не авторизован")
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE players SET banned = 1 WHERE name = ?", (req.name,))
+    conn.execute("UPDATE players SET banned = 1 WHERE name = ?", (req.name,))
     conn.commit()
     conn.close()
-    
     return {"status": "banned"}
 
 if __name__ == "__main__":
-    print("🚀 Сервер запускается... База данных: jager_database.db")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

@@ -784,1324 +784,232 @@
 
 <script>
 (function(){
+  // --- КОНФИГУРАЦИЯ ---
+  const API_BASE_URL = 'https://jager-casino.onrender.com';
   const START_BALANCE = 5000;
+  
+  // --- СОСТОЯНИЕ ---
   let balance = START_BALANCE;
+  let stats = { games:0, wins:0, losses:0, totalWin:0, totalLose:0, bestWin:0, streak:0, totalWagered:0 };
+  let session = null; // { token, name }
+  let adminToken = sessionStorage.getItem('jager_admin_token');
 
-  // ---------- Telegram WebApp integration ----------
-  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  // --- TELEGRAM WEBAPP ---
+  const tg = window.Telegram?.WebApp;
   let tgUser = null;
-  if(tg){
-    try{
-      tg.ready();
-      tg.expand();
-      tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
-    }catch(e){ /* not running inside Telegram, ignore */ }
-  }
-  const userKey = tgUser && tgUser.id ? ('jager_profile_' + tgUser.id) : 'jager_profile_guest';
-
-  // ==================== BACKEND API ====================
-  const API_BASE_URL = 'https://jager-casino.onrender.com'; // <-- ВАЖНО: Адрес твоего сервера
-
-  const SESSION_KEY = 'jager_session_v1';
-  function loadSession(){
-    try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }catch(e){ return null; }
-  }
-  function saveSession(session){
-    try{ localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }catch(e){}
-  }
-  let session = loadSession(); 
-
-  async function apiRegister(name, password){
-    const res = await fetch(API_BASE_URL + '/api/register', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name, password, tg_id: tgUser ? String(tgUser.id) : null})
-    });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok) throw new Error(data.detail || 'Ошибка регистрации');
-    return data;
+  if(tg) {
+    tg.ready();
+    tg.expand();
+    tgUser = tg.initDataUnsafe?.user;
   }
 
-  function apiActivity(text){
-    if(!API_BASE_URL || !session) return;
-    fetch(API_BASE_URL + '/api/activity', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({token: session.token, activity: text})
-    }).catch(()=>{});
-  }
-  function apiSync(){
-    if(!API_BASE_URL || !session) return;
-    fetch(API_BASE_URL + '/api/sync', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        token: session.token, balance,
-        games: stats.games, wins: stats.wins, losses: stats.losses,
-        total_win: stats.totalWin, total_lose: stats.totalLose,
-        total_wagered: stats.totalWagered || 0, best_win: stats.bestWin
-      })
-    }).catch(()=>{});
-  }
-
-
+  // --- DOM ЭЛЕМЕНТЫ ---
   const $ = id => document.getElementById(id);
   const fmt = n => Math.round(n).toLocaleString('ru-RU');
 
-  function toast(msg){
-    const t = $('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toast._h);
-    toast._h = setTimeout(()=>t.classList.remove('show'), 1800);
+  function toast(msg) {
+    // Простая реализация тоста, если у тебя есть своя - замени
+    console.log(msg);
+    alert(msg); // Временно для отладки
   }
 
-  function renderBalance(){
-    $('balanceDisplay').textContent = fmt(balance);
+  function renderBalance() {
+    const el = $('balanceDisplay');
+    if(el) el.textContent = fmt(balance);
   }
 
-  // ---------- Data model: stats / quests / referrals ----------
-  function defaultStats(){
-    return {games:0, wins:0, losses:0, totalWin:0, totalLose:0, bestWin:0, streak:0, totalEarned:0, totalWagered:0, lastGameAt:0};
-  }
-  function defaultQuests(){
-    return {adminMsgDone:false, channelDone:false, activityClaimed:[]}; 
-  }
-  function defaultRefData(){
-    return {code: 'g' + Math.random().toString(36).slice(2,8), invited:0, active:0, earned:0, referredBy:null, processedStartParam:false};
-  }
-
-  let stats = defaultStats();
-  let quests = defaultQuests();
-  let refData = defaultRefData();
-
-  const ACTIVITY_MILESTONES = Array.from({length:10}, (_,i)=>{
-    const step = i+1;
-    const games = step*10;
-    const coins = step*5000;
-    const reward = step*1500;
-    return {step, games, coins, reward};
-  });
-
-  const RANKS = [
-    {name:'Бронза', emoji:'🥉', min:0},
-    {name:'Серебро', emoji:'🥈', min:100000},
-    {name:'Золото', emoji:'🥇', min:300000},
-    {name:'Платина', emoji:'💎', min:750000},
-    {name:'Алмаз', emoji:'', min:1500000},
-  ];
-  function currentRank(){
-    let r = RANKS[0];
-    for(const rank of RANKS){ if(stats.totalEarned >= rank.min) r = rank; }
-    return r;
-  }
-  function nextRank(){
-    const idx = RANKS.findIndex(r=>r===currentRank());
-    return idx < RANKS.length-1 ? RANKS[idx+1] : null;
+  // --- API ФУНКЦИИ ---
+  async function apiRegister(name, password) {
+    const res = await fetch(API_BASE_URL + '/api/register', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, password, tg_id: tgUser?.id })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail);
+    return data;
   }
 
-  function recordRoundResult(betAmount, payout){
-    stats.games++;
-    stats.totalWagered = (stats.totalWagered || 0) + Math.max(0, betAmount);
-    stats.lastGameAt = Date.now();
-    const net = payout - betAmount;
-    if(net > 0){
-      stats.wins++;
-      stats.streak++;
-      stats.totalWin += net;
-      stats.totalEarned += payout;
-      if(net > stats.bestWin) stats.bestWin = net;
-    } else {
-      stats.losses++;
-      stats.streak = 0;
-      stats.totalLose += Math.abs(net);
-    }
-    checkActivityQuests();
-    renderProfile();
-    saveProfile();
-    apiSync();
-  }
-
-  // ---------- Persistence ----------
-  function loadProfile(){
-    try{
-      const raw = localStorage.getItem(userKey);
-      if(raw){
-        const data = JSON.parse(raw);
-        balance = typeof data.balance === 'number' ? data.balance : START_BALANCE;
-        stats = data.stats ? Object.assign(defaultStats(), data.stats) : defaultStats();
-        quests = data.quests ? Object.assign(defaultQuests(), data.quests) : defaultQuests();
-        refData = data.refData ? Object.assign(defaultRefData(), data.refData) : defaultRefData();
-      } else {
-        balance = START_BALANCE;
+  async function apiSync() {
+    if(!session) return;
+    try {
+      const res = await fetch(API_BASE_URL + '/api/sync', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          token: session.token, balance, ...stats
+        })
+      });
+      const data = await res.json();
+      if(res.ok && data.balance !== undefined) {
+        // Если сервер вернул баланс больше (админ начислил), обновляем
+        if(data.balance > balance) {
+          const diff = data.balance - balance;
+          balance = data.balance;
+          renderBalance();
+          saveProfile();
+          if(data.credited > 0) toast(`💎 Админ начислил вам ${fmt(data.credited)} фишек!`);
+        } else {
+          // Просто синхронизируем (сервер принял наши данные)
+          balance = data.balance; 
+          renderBalance();
+        }
       }
-    }catch(e){
-      balance = START_BALANCE; 
-    }
-    renderBalance();
+    } catch(e) { console.error('Sync error', e); }
   }
 
-  function saveProfile(){
-    try{
-      localStorage.setItem(userKey, JSON.stringify({
-        balance:balance, stats:stats, quests:quests, refData:refData, updated:Date.now()
-      }));
-    }catch(e){}
+  async function apiAdminLogin(password) {
+    const res = await fetch(API_BASE_URL + '/api/admin/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail);
+    return data.token;
   }
 
-  function changeBalance(delta){
+  async function apiAdminGive(targetName, amount) {
+    if(!adminToken) throw new Error('Нет прав админа');
+    const res = await fetch(API_BASE_URL + '/api/admin/give', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ admin_token: adminToken, name: targetName, amount })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail);
+    return data;
+  }
+
+  async function apiAdminGetPlayers() {
+    if(!adminToken) throw new Error('Нет прав');
+    const res = await fetch(`${API_BASE_URL}/api/admin/players?admin_token=${adminToken}`);
+    if(!res.ok) throw new Error('Ошибка получения игроков');
+    return res.json();
+  }
+
+  // --- ЛОГИКА ИГРЫ (Упрощенная для примера) ---
+  function changeBalance(delta) {
     balance += delta;
     if(balance < 0) balance = 0;
     renderBalance();
     saveProfile();
+    apiSync(); // Отправляем на сервер сразу
   }
 
-  loadProfile();
-
-  // ==================== MINI-РЕГИСТРАЦИЯ ====================
-  function maybeShowRegistration(){
-    if(!API_BASE_URL) return; 
-    if(session && session.token) return; 
-    $('regOverlay').classList.add('show');
-  }
-  $('regSubmitBtn').addEventListener('click', async ()=>{
-    const name = $('regNameInput').value.trim();
-    const password = $('regPasswordInput').value;
-    $('regError').textContent = '';
-    if(name.length < 2){ $('regError').textContent = 'Введи имя (от 2 символов)'; return; }
-    if(password.length < 4){ $('regError').textContent = 'Пароль от 4 символов'; return; }
-    try{
-      const data = await apiRegister(name, password);
-      session = {token: data.token, name: data.name};
-      saveSession(session);
-      if(!localStorage.getItem(userKey)){
-        balance = data.balance;
-        stats = Object.assign(defaultStats(), {
-          games:data.games, wins:data.wins, losses:data.losses,
-          totalWin:data.total_win, totalLose:data.total_lose,
-          totalWagered:data.total_wagered, bestWin:data.best_win
-        });
-        renderBalance(); renderProfile(); saveProfile();
-      }
-      $('regOverlay').classList.remove('show');
-      toast('Добро пожаловать, '+data.name+'!');
-      apiActivity('В меню');
-    }catch(e){
-      $('regError').textContent = e.message || 'Не удалось войти';
+  function recordGame(bet, win) {
+    stats.games++;
+    stats.totalWagered += bet;
+    if(win > bet) {
+      stats.wins++;
+      stats.totalWin += (win - bet);
+      if((win-bet) > stats.bestWin) stats.bestWin = win - bet;
+    } else {
+      stats.losses++;
+      stats.totalLose += (bet - win); // Упрощенно
     }
-  });
-  maybeShowRegistration();
+    saveProfile();
+    apiSync();
+  }
 
-  if(API_BASE_URL){
-    setInterval(()=>{
-      if(!session) return;
+  // --- LOCAL STORAGE ---
+  function saveProfile() {
+    localStorage.setItem('jager_profile', JSON.stringify({ balance, stats, session }));
+  }
+
+  function loadProfile() {
+    const raw = localStorage.getItem('jager_profile');
+    if(raw) {
+      const data = JSON.parse(raw);
+      balance = data.balance || START_BALANCE;
+      stats = Object.assign(stats, data.stats);
+      session = data.session;
+    }
+    renderBalance();
+  }
+
+  // --- АДМИН ПАНЕЛЬ (UI) ---
+  function openAdminPanel() {
+    // Здесь должна быть логика показа модального окна админки
+    // Для примера используем prompt
+    const target = prompt("Введите имя игрока для начисления:");
+    if(!target) return;
+    const amount = parseInt(prompt("Сумма:"));
+    if(!amount) return;
+    
+    apiAdminGive(target, amount)
+      .then(() => toast(`✅ Игроку ${target} начислено ${amount}. Он получит их при следующем действии.`))
+      .catch(e => toast('❌ Ошибка: ' + e.message));
+      
+    // Обновить список (если есть UI)
+    refreshAdminList();
+  }
+
+  async function refreshAdminList() {
+    try {
+      const data = await apiAdminGetPlayers();
+      console.log("Игроки онлайн:", data.online_now, "Всего:", data.total_players);
+      // Здесь можно отрисовать таблицу в HTML
+    } catch(e) { console.error(e); }
+  }
+
+  // --- ИНИЦИАЛИЗАЦИЯ ---
+  async function init() {
+    loadProfile();
+    
+    // Если нет сессии, показываем регистрацию (упрощенно)
+    if(!session) {
+      const name = prompt("Введите имя для входа в казино:");
+      const pass = prompt("Введите пароль:");
+      if(name && pass) {
+        try {
+          const data = await apiRegister(name, pass);
+          session = { token: data.token, name: data.name };
+          balance = data.balance;
+          saveProfile();
+          renderBalance();
+          toast(`Добро пожаловать, ${name}!`);
+        } catch(e) { toast('Ошибка входа: ' + e.message); }
+      }
+    } else {
+      // Если есть сессия, сразу синхронизируемся
       apiSync();
-      const activeScreen = document.querySelector('.screen.active');
-      const id = activeScreen ? activeScreen.id.replace('screen-','') : 'solo';
-      apiActivity(SCREEN_ACTIVITY_LABELS[id] || 'В меню');
-    }, 20000);
-  }
-
-
-  function handleReferralStartParam(){
-    if(!tg || !tg.initDataUnsafe) return;
-    const startParam = tg.initDataUnsafe.start_param || '';
-    if(!startParam || refData.processedStartParam) return;
-    if(startParam.startsWith('ref_')){
-      const code = startParam.slice(4);
-      if(code && code !== refData.code){
-        refData.referredBy = code;
-        refData.processedStartParam = true;
-        saveProfile();
-      }
     }
-  }
-  handleReferralStartParam();
 
-  if(tgUser){
-    $('profileUsername').textContent = tgUser.username ? ('@'+tgUser.username) : (tgUser.first_name || 'Игрок');
-    $('profileTgId').textContent = 'ID: ' + tgUser.id;
-  }
-
-  $('closeBtn').addEventListener('click', ()=>{
-    if(tg){ tg.close(); } else { toast('Закрытие доступно внутри Telegram'); }
-  });
-  let menuTapCount = 0, menuTapTimer = null;
-  $('menuBtn').addEventListener('click', ()=>{
-    menuTapCount++;
-    clearTimeout(menuTapTimer);
-    menuTapTimer = setTimeout(()=>{ menuTapCount = 0; }, 1500);
-    if(menuTapCount >= 5){
-      menuTapCount = 0;
-      openAdminLogin();
-      return;
-    }
-    toast('JAGER · игровая валюта без реальной стоимости');
-  });
-
-  // ---------- Navigation ----------
-  const screens = document.querySelectorAll('.screen');
-  const navItems = document.querySelectorAll('.nav-item');
-  const tabScreenMap = {pvp:'pvp', solo:'solo', giveaways:'giveaways', shop:'shop', referrals:'referrals', profile:'profile'};
-
-  const SCREEN_ACTIVITY_LABELS = {
-    solo:'В меню', mines:'Играет в Мины', roulette:'Играет в Рулетку', upgrade:'Играет в Апгрейд',
-    rocket:'Играет в Ракету', ladder:'Играет в Лесенку', pvp:'В PvP Battle',
-    giveaways:'Смотрит задания', shop:'В магазине', referrals:'В рефералах', profile:'В профиле'
-  };
-  function showScreen(id){
-    screens.forEach(s=>s.classList.remove('active'));
-    $('screen-'+id).classList.add('active');
-    apiActivity(SCREEN_ACTIVITY_LABELS[id] || ('Экран: '+id));
-  }
-
-  navItems.forEach(item=>{
-    item.addEventListener('click', ()=>{
-      navItems.forEach(n=>n.classList.remove('active'));
-      item.classList.add('active');
-      const tab = item.dataset.tab;
-      showScreen(tabScreenMap[tab] || 'solo');
-    });
-  });
-
-  document.querySelectorAll('.game-card').forEach(card=>{
-    card.addEventListener('click', ()=> showScreen(card.dataset.game));
-  });
-
-  document.querySelectorAll('[data-back]').forEach(btn=>{
-    btn.addEventListener('click', ()=> showScreen('solo'));
-  });
-
-  // Quick bet helpers
-  document.querySelectorAll('[data-half]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const inp = $(b.dataset.half);
-      inp.value = Math.max(1, Math.floor(parseFloat(inp.value||1)/2));
-      inp.dispatchEvent(new Event('input'));
-    });
-  });
-  document.querySelectorAll('[data-double]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const inp = $(b.dataset.double);
-      inp.value = Math.max(1, Math.floor(parseFloat(inp.value||1)*2));
-      inp.dispatchEvent(new Event('input'));
-    });
-  });
-
-  function getBet(id){
-    const v = Math.floor(parseFloat($(id).value));
-    return (isNaN(v) || v < 1) ? 0 : v;
-  }
-
-  // ==================== MINES ====================
-  const MINES_TOTAL = 25;
-  let minesState = null;
-
-  function minesMultiplier(mines, revealed){
-    let mult = 1;
-    let safe = MINES_TOTAL - mines;
-    for(let i=0;i<revealed;i++){
-      mult *= (MINES_TOTAL - i) / (safe - i);
-    }
-    return mult * 0.95;
-  }
-
-  function buildMinesGrid(){
-    const grid = $('minesGrid');
-    grid.innerHTML = '';
-    for(let i=0;i<MINES_TOTAL;i++){
-      const cell = document.createElement('div');
-      cell.className = 'mine-cell';
-      cell.dataset.idx = i;
-      cell.addEventListener('click', onMineCellClick);
-      grid.appendChild(cell);
-    }
-  }
-  buildMinesGrid();
-
-  $('minesMinus').addEventListener('click', ()=>{
-    let n = parseInt($('minesCount').textContent);
-    if(n>1){ $('minesCount').textContent = n-1; }
-  });
-  $('minesPlus').addEventListener('click', ()=>{
-    let n = parseInt($('minesCount').textContent);
-    if(n<24){ $('minesCount').textContent = n+1; }
-  });
-
-  $('minesStartBtn').addEventListener('click', ()=>{
-    const bet = getBet('minesBet');
-    if(bet <= 0){ toast('Введите ставку'); return; }
-    if(bet > balance){ toast('Недостаточно фишек'); return; }
-    const minesCount = parseInt($('minesCount').textContent);
-
-    changeBalance(-bet);
-    const minePositions = new Set();
-    while(minePositions.size < minesCount){
-      minePositions.add(Math.floor(Math.random()*MINES_TOTAL));
-    }
-    minesState = {bet, minesCount, minePositions, revealed:0, active:true};
-
-    document.querySelectorAll('.mine-cell').forEach(c=>{
-      c.className = 'mine-cell';
-      c.textContent = '';
-    });
-    $('minesResult').className = 'result-msg';
-    $('minesResult').textContent = '';
-    $('minesMultDisplay').textContent = 'x1.00';
-    $('minesStartBtn').style.display = 'none';
-    $('minesCashoutBtn').textContent = 'Забрать выигрыш';
-    $('minesCashoutBtn').style.display = 'block';
-  });
-
-  function onMineCellClick(e){
-    if(!minesState || !minesState.active) return;
-    const idx = parseInt(e.currentTarget.dataset.idx);
-    const cell = e.currentTarget;
-    if(cell.classList.contains('revealed-safe') || cell.classList.contains('revealed-mine')) return;
-
-    if(minesState.minePositions.has(idx)){
-      cell.classList.add('revealed-mine');
-      cell.textContent = '💥';
-      minesState.active = false;
-      revealAllMines();
-      $('minesResult').className = 'result-msg lose';
-      $('minesResult').textContent = 'Взрыв! Потеряно ' + fmt(minesState.bet) + ' фишек';
-      recordRoundResult(minesState.bet, 0);
-      endMinesRound();
-    } else {
-      minesState.revealed++;
-      cell.classList.add('revealed-safe');
-      cell.textContent = '💎';
-      const mult = minesMultiplier(minesState.minesCount, minesState.revealed);
-      $('minesMultDisplay').textContent = 'x' + mult.toFixed(2);
-      $('minesCashoutBtn').textContent = 'Забрать ' + fmt(minesState.bet*mult) + ' фишек';
-      if(minesState.revealed === MINES_TOTAL - minesState.minesCount){
-        cashoutMines();
-      }
-    }
-  }
-
-  function revealAllMines(){
-    document.querySelectorAll('.mine-cell').forEach(c=>{
-      const idx = parseInt(c.dataset.idx);
-      c.classList.add('locked');
-      if(minesState.minePositions.has(idx) && !c.classList.contains('revealed-mine')){
-        c.classList.add('revealed-mine');
-        c.textContent = '💣';
-      }
-    });
-  }
-
-  function cashoutMines(){
-    if(!minesState || !minesState.active) return;
-    const mult = minesMultiplier(minesState.minesCount, minesState.revealed);
-    const win = minesState.bet * mult;
-    minesState.active = false;
-    changeBalance(win);
-    $('minesResult').className = 'result-msg win';
-    $('minesResult').textContent = minesState.revealed>0
-      ? ('Выигрыш ' + fmt(win) + ' фишек (x' + mult.toFixed(2) + ')')
-      : 'Ставка возвращена';
-    recordRoundResult(minesState.bet, win);
-    revealAllMines();
-    endMinesRound();
-  }
-
-  $('minesCashoutBtn').addEventListener('click', ()=>{
-    if(!minesState || !minesState.active) return;
-    if(minesState.revealed === 0){ toast('Откройте хотя бы одну клетку'); return; }
-    cashoutMines();
-  });
-
-  function endMinesRound(){
-    $('minesCashoutBtn').style.display = 'none';
-    $('minesStartBtn').style.display = 'block';
-    $('minesStartBtn').textContent = 'Начать игру';
-  }
-
-  // ==================== ROULETTE ====================
-  const wheelSegments = [
-    {mult:0,   color:'#241a45', weight:76},
-    {mult:1.2, color:'#3d2678', weight:25},
-    {mult:1.5, color:'#6a35b0', weight:18},
-    {mult:2,   color:'#9257ff', weight:14},
-    {mult:3,   color:'#c231d9', weight:8},
-    {mult:5,   color:'#f5479c', weight:4},
-    {mult:10,  color:'#ffc94a', weight:1},
-  ];
-  const totalWeight = wheelSegments.reduce((s,x)=>s+x.weight,0);
-
-  function buildWheel(){
-    let acc = 0;
-    const gradParts = [];
-    wheelSegments.forEach(seg=>{
-      const startDeg = acc/totalWeight*360;
-      acc += seg.weight;
-      const endDeg = acc/totalWeight*360;
-      gradParts.push(seg.color+' '+startDeg.toFixed(2)+'deg '+endDeg.toFixed(2)+'deg');
-    });
-    $('wheel').style.background = 'conic-gradient(' + gradParts.join(',') + ')';
-
-    const legend = $('wheelLegend');
-    legend.innerHTML = '';
-    wheelSegments.forEach(seg=>{
-      const pill = document.createElement('div');
-      pill.className = 'mult-pill';
-      pill.style.color = seg.color === '#241a45' ? 'var(--muted)' : seg.color;
-      pill.textContent = 'x'+seg.mult;
-      legend.appendChild(pill);
-    });
-  }
-  buildWheel();
-
-  let wheelRotation = 0;
-  let spinning = false;
-
-  $('rouletteSpinBtn').addEventListener('click', ()=>{
-    if(spinning) return;
-    const bet = getBet('rouletteBet');
-    if(bet <= 0){ toast('Введите ставку'); return; }
-    if(bet > balance){ toast('Недостаточно фишек'); return; }
-
-    changeBalance(-bet);
-    spinning = true;
-    $('rouletteResult').className = 'result-msg';
-    $('rouletteSpinBtn').disabled = true;
-    $('wheelCenter').textContent = '...';
-
-    let r = Math.random()*totalWeight;
-    let acc = 0, chosen = wheelSegments[0], chosenIdx = 0;
-    for(let i=0;i<wheelSegments.length;i++){
-      acc += wheelSegments[i].weight;
-      if(r <= acc){ chosen = wheelSegments[i]; chosenIdx = i; break; }
-    }
-    const startW = wheelSegments.slice(0,chosenIdx).reduce((s,x)=>s+x.weight,0);
-    const segStartDeg = startW/totalWeight*360;
-    const segEndDeg = (startW+chosen.weight)/totalWeight*360;
-    const targetDeg = segStartDeg + (segEndDeg-segStartDeg)*0.5;
-
-    const spins = 5 + Math.floor(Math.random()*2);
-    const finalRotation = wheelRotation - (wheelRotation % 360) + spins*360 + (360 - targetDeg);
-    wheelRotation = finalRotation;
-    $('wheel').style.transform = 'rotate('+finalRotation+'deg)';
-
-    setTimeout(()=>{
-      spinning = false;
-      $('rouletteSpinBtn').disabled = false;
-      $('wheelCenter').textContent = 'x'+chosen.mult;
-      const win = bet * chosen.mult;
-      if(chosen.mult > 0){
-        changeBalance(win);
-        $('rouletteResult').className = 'result-msg win';
-        $('rouletteResult').textContent = 'Выпало x'+chosen.mult+' — выигрыш '+fmt(win)+' фишек';
-        recordRoundResult(bet, win);
-      } else {
-        $('rouletteResult').className = 'result-msg lose';
-        $('rouletteResult').textContent = 'Выпало x0 — ставка сгорела';
-        recordRoundResult(bet, 0);
-      }
-    }, 4300);
-  });
-
-  // ==================== UPGRADE ====================
-  let upgradeNeedleRotation = 0;
-  function updateUpgradeUI(){
-    const bet = getBet('upgradeBet') || 0;
-    const multRaw = parseInt($('upgradeMultSlider').value);
-    const mult = multRaw/10;
-    $('upgradeMultLabel').textContent = 'x'+mult.toFixed(2);
-    const chance = Math.min(95, Math.max(1, 95/mult));
-    $('upgradeChanceLabel').textContent = chance.toFixed(1)+'%';
-    $('upgradeFromVal').textContent = '◆'+fmt(bet);
-    $('upgradeToVal').textContent = '◆'+fmt(bet*mult);
-    const chanceDeg = chance/100*360;
-    $('upgradeGauge').style.background = 'conic-gradient(var(--green) 0deg '+chanceDeg.toFixed(2)+'deg, var(--red) '+chanceDeg.toFixed(2)+'deg 360deg)';
-    $('upgradeGaugeCenter').textContent = chance.toFixed(0)+'%';
-  }
-  $('upgradeBet').addEventListener('input', updateUpgradeUI);
-  $('upgradeMultSlider').addEventListener('input', updateUpgradeUI);
-  updateUpgradeUI();
-
-  $('upgradeGoBtn').addEventListener('click', ()=>{
-    const bet = getBet('upgradeBet');
-    if(bet <= 0){ toast('Введите ставку'); return; }
-    if(bet > balance){ toast('Недостаточно фишек'); return; }
-    const multRaw = parseInt($('upgradeMultSlider').value);
-    const mult = multRaw/10;
-    const chance = Math.min(95, Math.max(1, 95/mult));
-    const chanceDeg = chance/100*360;
-
-    const roll = Math.random()*100;
-    const success = roll <= chance;
-    const targetDeg = success ? chanceDeg*0.5 : chanceDeg + (360-chanceDeg)*0.5;
-
-    changeBalance(-bet);
-    $('upgradeGoBtn').disabled = true;
-    $('upgradeResult').className = 'result-msg';
-    $('upgradeResult').textContent = '';
-
-    const spins = 3 + Math.floor(Math.random()*2);
-    upgradeNeedleRotation = upgradeNeedleRotation - (upgradeNeedleRotation % 360) + spins*360 + targetDeg;
-    $('upgradeNeedle').style.transform = 'translate(-50%,-100%) rotate('+upgradeNeedleRotation+'deg)';
-
-    setTimeout(()=>{
-      $('upgradeGoBtn').disabled = false;
-      if(success){
-        const win = bet*mult;
-        changeBalance(win);
-        $('upgradeResult').className = 'result-msg win';
-        $('upgradeResult').textContent = 'Успех! Получено '+fmt(win)+' фишек';
-        recordRoundResult(bet, win);
-      } else {
-        $('upgradeResult').className = 'result-msg lose';
-        $('upgradeResult').textContent = 'Неудача — потеряно '+fmt(bet)+' фишек';
-        recordRoundResult(bet, 0);
-      }
-    }, 2700);
-  });
-
-  // ==================== ROCKET ====================
-  let rocketInterval = null;
-  let rocketCountdownInterval = null;
-  let rocketMult = 1;
-  let rocketCrashAt = 1;
-  let rocketActive = false;
-  let rocketBetLocked = 0;
-  let rocketPending = false;
-
-  function randomCrashPoint(){
-    const RTP = 0.95;
-    const r = Math.random();
-    const raw = RTP / (1 - r);
-    return Math.max(1.01, Math.min(raw, 50));
-  }
-
-  function resetRocketVisual(){
-    $('rocketEmoji').style.left='8%';
-    $('rocketEmoji').style.bottom='14px';
-    $('rocketEmoji').textContent='';
-    $('rocketMultDisplay').textContent='1.00x';
-    $('rocketMultDisplay').style.color='var(--text)';
-    $('rocketTrail').style.height='0%';
-    $('rocketPath').setAttribute('points','0,220');
-    $('rocketCountdown').classList.remove('show');
-  }
-
-  function finishRocketLoss(){
-    rocketActive = false;
-    rocketPending = false;
-    clearInterval(rocketInterval);
-    clearInterval(rocketCountdownInterval);
-    $('rocketMultDisplay').textContent = rocketCrashAt.toFixed(2)+'x';
-    $('rocketMultDisplay').style.color = 'var(--red)';
-    $('rocketEmoji').style.left = '92%';
-    $('rocketEmoji').textContent = '💥';
-    $('rocketStatus').textContent = 'Взрыв на '+rocketCrashAt.toFixed(2)+'x';
-    $('rocketResult').className = 'result-msg lose';
-    $('rocketResult').textContent = 'Не успели забрать — потеряно '+fmt(rocketBetLocked)+' фишек';
-    recordRoundResult(rocketBetLocked, 0);
-    $('rocketCashoutBtn').style.display = 'none';
-    $('rocketLaunchBtn').style.display = 'block';
-    $('rocketLaunchBtn').textContent = 'Запустить снова';
-    setTimeout(resetRocketVisual, 1400);
-  }
-
-  function startRocketFlight(){
-    rocketPending = false;
-    rocketActive = true;
-    rocketCrashAt = randomCrashPoint();
-    $('rocketCountdown').classList.remove('show');
-    $('rocketStatus').textContent = 'В полёте...';
-    $('rocketCashoutBtn').style.display = 'block';
-    $('rocketCashoutBtn').disabled = false;
-    const start = Date.now();
-    const pathPoints = ['0,220'];
-    rocketInterval = setInterval(()=>{
-      const t = (Date.now()-start)/1000;
-      rocketMult = 1 + Math.pow(t, 1.55)*0.22;
-      if(rocketMult >= rocketCrashAt){ finishRocketLoss(); return; }
-      $('rocketMultDisplay').textContent = rocketMult.toFixed(2)+'x';
-      $('rocketMultDisplay').style.color = rocketMult >= 2 ? 'var(--gold)' : 'var(--text)';
-      $('rocketCashoutBtn').textContent = 'Забрать '+fmt(rocketBetLocked*rocketMult)+' фишек';
-      const heightPct = Math.min(90, (rocketMult-1)*18);
-      const widthPct = Math.min(88, 8 + t*14);
-      $('rocketEmoji').style.left = widthPct + '%';
-      $('rocketEmoji').style.bottom = (14+heightPct*2)+'px';
-      $('rocketTrail').style.height = heightPct+'%';
-      const px = (widthPct/100)*300;
-      const py = 220 - (heightPct/100)*220;
-      pathPoints.push(px.toFixed(1)+','+py.toFixed(1));
-      if(pathPoints.length > 60) pathPoints.shift();
-      $('rocketPath').setAttribute('points', pathPoints.join(' '));
-      $('rocketPath').style.stroke = (rocketMult >= 2 ? '#ffc94a' : '#33c7ff');
-    }, 60);
-  }
-
-  $('rocketLaunchBtn').addEventListener('click', ()=>{
-    if(rocketActive || rocketPending) return;
-    const bet = getBet('rocketBet');
-    if(bet <= 0){ toast('Введите ставку'); return; }
-    if(bet > balance){ toast('Недостаточно фишек'); return; }
-
-    changeBalance(-bet);
-    rocketBetLocked = bet;
-    rocketMult = 1;
-    rocketPending = true;
-    rocketActive = false;
-    $('rocketResult').className = 'result-msg';
-    $('rocketResult').textContent = '';
-    $('rocketLaunchBtn').style.display = 'none';
-    $('rocketCashoutBtn').style.display = 'none';
-    $('rocketStatus').textContent = 'Ставка принята. Подготовка старта...';
-    $('rocketCountdown').classList.add('show');
-
-    let seconds = 30;
-    $('rocketCountdown').textContent = '🚀 Старт через '+seconds+' сек';
-    clearInterval(rocketCountdownInterval);
-    rocketCountdownInterval = setInterval(()=>{
-      seconds--;
-      $('rocketCountdown').textContent = '🚀 Старт через '+seconds+' сек';
-      if(seconds <= 0){
-        clearInterval(rocketCountdownInterval);
-        startRocketFlight();
-      }
-    },1000);
-  });
-
-  $('rocketCashoutBtn').addEventListener('click', ()=>{
-    if(!rocketActive) return;
-    clearInterval(rocketInterval);
-    rocketActive = false;
-    const win = rocketBetLocked*rocketMult;
-    changeBalance(win);
-    $('rocketResult').className = 'result-msg win';
-    $('rocketResult').textContent = 'Забрано '+fmt(win)+' фишек (x'+rocketMult.toFixed(2)+')';
-    recordRoundResult(rocketBetLocked, win);
-    $('rocketStatus').textContent = 'Успешный вывод на '+rocketMult.toFixed(2)+'x';
-    $('rocketCashoutBtn').style.display = 'none';
-    $('rocketLaunchBtn').style.display = 'block';
-    $('rocketLaunchBtn').textContent = 'Запустить снова';
-    setTimeout(resetRocketVisual, 1400);
-  });
-
-  // ==================== LADDER ====================
-  const LADDER_LEVELS = 6;      
-  const LADDER_CELLS = 3;       
-  const LADDER_MINES = 1;       
-  function ladderMultAt(level){
-    const base = LADDER_CELLS / (LADDER_CELLS - LADDER_MINES);
-    return Math.pow(base, level) * 0.95;
-  }
-  let ladderState = null;
-
-  function renderLadderLevels(){
-    const wrap = $('ladderLevels');
-    wrap.innerHTML = '';
-    for(let lvl=1; lvl<=LADDER_LEVELS; lvl++){
-      const row = document.createElement('div');
-      row.className = 'ladder-level-row';
-      row.id = 'ladderLvl'+lvl;
-      row.innerHTML = '<span>Уровень '+lvl+'</span><b>x'+ladderMultAt(lvl).toFixed(2)+'</b>';
-      wrap.appendChild(row);
-    }
-  }
-  renderLadderLevels();
-
-  function updateLadderLevelStyles(){
-    for(let lvl=1; lvl<=LADDER_LEVELS; lvl++){
-      const row = $('ladderLvl'+lvl);
-      row.className = 'ladder-level-row' +
-        (ladderState && lvl <= ladderState.level ? ' passed' : '') +
-        (ladderState && ladderState.active && lvl === ladderState.level+1 ? ' current' : '');
-    }
-  }
-
-  function buildLadderRow(){
-    const row = $('ladderRow');
-    row.innerHTML = '';
-    for(let i=0;i<LADDER_CELLS;i++){
-      const cell = document.createElement('div');
-      cell.className = 'ladder-cell';
-      cell.dataset.idx = i;
-      cell.textContent = '❔';
-      cell.addEventListener('click', onLadderCellClick);
-      row.appendChild(cell);
-    }
-  }
-  buildLadderRow();
-
-  $('ladderStartBtn').addEventListener('click', ()=>{
-    const bet = getBet('ladderBet');
-    if(bet <= 0){ toast('Введите ставку'); return; }
-    if(bet > balance){ toast('Недостаточно фишек'); return; }
-    changeBalance(-bet);
-    ladderState = {bet, level:0, active:true};
-    document.querySelectorAll('.ladder-cell').forEach(c=>{ c.className='ladder-cell'; c.textContent='❔'; });
-    $('ladderResult').className = 'result-msg';
-    $('ladderResult').textContent = '';
-    $('ladderMultDisplay').textContent = 'x1.00';
-    $('ladderStartBtn').style.display = 'none';
-    $('ladderCashoutBtn').textContent = 'Забрать выигрыш';
-    $('ladderCashoutBtn').style.display = 'block';
-    updateLadderLevelStyles();
-  });
-
-  function onLadderCellClick(e){
-    if(!ladderState || !ladderState.active) return;
-    const cells = document.querySelectorAll('.ladder-cell');
-    const minePos = Math.floor(Math.random()*LADDER_CELLS); 
-    const idx = parseInt(e.currentTarget.dataset.idx);
-
-    cells.forEach(c=> c.classList.add('locked'));
-    if(idx === minePos){
-      e.currentTarget.classList.add('mine');
-      e.currentTarget.textContent = '💣';
-      cells.forEach((c,i)=>{ if(i!==idx){ c.textContent = '🟩'; c.classList.add('safe'); } });
-      ladderState.active = false;
-      $('ladderResult').className = 'result-msg lose';
-      $('ladderResult').textContent = 'Мина! Потеряно ' + fmt(ladderState.bet) + ' фишек';
-      recordRoundResult(ladderState.bet, 0);
-      endLadderRound();
-    } else {
-      e.currentTarget.classList.add('safe');
-      e.currentTarget.textContent = '💎';
-      ladderState.level++;
-      const mult = ladderMultAt(ladderState.level);
-      $('ladderMultDisplay').textContent = 'x'+mult.toFixed(2);
-      $('ladderCashoutBtn').textContent = 'Забрать ' + fmt(ladderState.bet*mult) + ' фишек';
-      updateLadderLevelStyles();
-      if(ladderState.level >= LADDER_LEVELS){
-        cashoutLadder();
-      } else {
-        setTimeout(buildLadderRow, 550); 
-      }
-    }
-  }
-
-  function cashoutLadder(){
-    if(!ladderState || !ladderState.active) return;
-    const mult = ladderMultAt(ladderState.level);
-    const win = ladderState.bet * mult;
-    ladderState.active = false;
-    changeBalance(win);
-    $('ladderResult').className = 'result-msg win';
-    $('ladderResult').textContent = ladderState.level>0
-      ? ('Выигрыш ' + fmt(win) + ' фишек (x' + mult.toFixed(2) + ')')
-      : 'Ставка возвращена';
-    recordRoundResult(ladderState.bet, win);
-    endLadderRound();
-  }
-
-  $('ladderCashoutBtn').addEventListener('click', ()=>{
-    if(!ladderState || !ladderState.active) return;
-    if(ladderState.level === 0){ toast('Сделайте хотя бы один шаг'); return; }
-    cashoutLadder();
-  });
-
-  function endLadderRound(){
-    $('ladderCashoutBtn').style.display = 'none';
-    $('ladderStartBtn').style.display = 'block';
-    $('ladderStartBtn').textContent = 'Начать игру';
-  }
-
-  // ==================== PVP BATTLE ====================
-  let pvpBusy = false;
-  let pvpWaitInterval = null;
-  let pvpMatchTimeout = null;
-  let pvpCurrentBet = 0;
-
-  function pvpReset(){
-    clearInterval(pvpWaitInterval);
-    clearTimeout(pvpMatchTimeout);
-    $('pvpWaitTrack').style.display = 'none';
-    $('pvpCancelBtn').style.display = 'none';
-    $('pvpFindBtn').style.display = 'block';
-    $('pvpFindBtn').disabled = false;
-    $('pvpFindBtn').textContent = 'Найти соперника';
-    $('pvpStatus').textContent = 'Сделай ставку, чтобы найти соперника';
-    $('pvpP1Bet').textContent = '◆0'; $('pvpP2Bet').textContent = '◆0';
-    $('pvpP1Pct').textContent = '50%'; $('pvpP2Pct').textContent = '50%';
-    $('pvpBarP1').style.width = '50%'; $('pvpBarP2').style.width = '50%';
-    pvpBusy = false;
-  }
-
-  $('pvpFindBtn').addEventListener('click', ()=>{
-    if(pvpBusy) return;
-    const bet = getBet('pvpBet');
-    if(bet <= 0){ toast('Введите ставку'); return; }
-    if(bet > balance){ toast('Недостаточно фишек'); return; }
-
-    pvpBusy = true;
-    pvpCurrentBet = bet;
-    changeBalance(-bet);
-    $('pvpFindBtn').style.display = 'none';
-    $('pvpCancelBtn').style.display = 'block';
-    $('pvpWaitTrack').style.display = 'block';
-    $('pvpWaitFill').style.width = '100%';
-    $('pvpResultCard').className = 'pvp-result-card';
-    $('pvpP1Bet').textContent = '◆'+fmt(bet);
-
-    const WAIT_SECONDS = 20;
-    let secondsLeft = WAIT_SECONDS;
-    $('pvpStatus').textContent = 'Ищем соперника... ' + secondsLeft + ' сек';
-
-    const matchAtSecond = 3 + Math.random()*(WAIT_SECONDS-3);
-
-    pvpWaitInterval = setInterval(()=>{
-      secondsLeft--;
-      $('pvpWaitFill').style.width = Math.max(0, (secondsLeft/WAIT_SECONDS)*100) + '%';
-      if(secondsLeft > 0){
-        $('pvpStatus').textContent = 'Ищем соперника... ' + secondsLeft + ' сек';
-      }
-      if(secondsLeft <= 0){
-        clearInterval(pvpWaitInterval);
-      }
-    }, 1000);
-
-    pvpMatchTimeout = setTimeout(()=>{
-      clearInterval(pvpWaitInterval);
-      const oppBet = Math.max(10, Math.round(bet * (0.5 + Math.random()*1.3)));
-      startPvpBattle(bet, oppBet);
-    }, matchAtSecond*1000);
-  });
-
-  $('pvpCancelBtn').addEventListener('click', ()=>{
-    if(!pvpBusy) return;
-    clearInterval(pvpWaitInterval);
-    clearTimeout(pvpMatchTimeout);
-    changeBalance(pvpCurrentBet);
-    toast('Соперник не найден — ставка возвращена');
-    pvpReset();
-  });
-
-  function startPvpBattle(bet, oppBet){
-    const p1Pct = Math.round((bet/(bet+oppBet))*1000)/10;
-    const p2Pct = Math.round(1000-p1Pct*10)/10;
-
-    $('pvpWaitTrack').style.display = 'none';
-    $('pvpCancelBtn').style.display = 'none';
-    $('pvpP1Bet').textContent = '◆'+fmt(bet);
-    $('pvpP2Bet').textContent = '◆'+fmt(oppBet);
-    $('pvpP1Pct').textContent = p1Pct+'%';
-    $('pvpP2Pct').textContent = p2Pct+'%';
-    $('pvpBarP1').style.width = p1Pct+'%';
-    $('pvpBarP2').style.width = p2Pct+'%';
-    $('pvpStatus').textContent = 'Соперник найден! Бой начинается...';
-
-    setTimeout(()=>{
-      const roll = Math.random()*100;
-      const p1wins = roll <= p1Pct;
-      const bank = bet + oppBet;
-      const commission = bank * 0.05;
-      const payout = bank - commission;
-
-      $('pvpResultCard').className = 'pvp-result-card show ' + (p1wins ? 'win' : 'lose');
-      if(p1wins){
-        changeBalance(payout);
-        $('pvpResultBig').textContent = '🏆 Победа!';
-        $('pvpResultSmall').textContent = 'Банк ' + fmt(bank) + ' минус 5% комиссии = получено ' + fmt(payout) + ' фишек';
-        recordRoundResult(bet, payout);
-      } else {
-        $('pvpResultBig').textContent = '💥 Поражение';
-        $('pvpResultSmall').textContent = 'Соперник забрал банк — потеряно ' + fmt(bet) + ' фишек';
-        recordRoundResult(bet, 0);
-      }
-      $('pvpStatus').textContent = 'Матч завершён';
-      $('pvpFindBtn').style.display = 'block';
-      $('pvpFindBtn').textContent = 'Найти соперника снова';
-      pvpBusy = false;
-    }, 1600);
-  }
-
-  // ==================== QUESTS ====================
-  const CHANNEL_URL = 'https://t.me/prostochannellll';
-  const ADMIN_USERNAME = 'crownemir';
-
-  $('questAdminOpenBtn').addEventListener('click', ()=>{
-    const url = 'https://t.me/'+ADMIN_USERNAME;
-    if(tg && tg.openTelegramLink){ tg.openTelegramLink(url); } else { window.open(url,'_blank'); }
-  });
-  $('questAdminCheckBtn').addEventListener('click', ()=>{
-    if(quests.adminMsgDone){ toast('Заявка уже отправлена или награда получена'); return; }
-    quests.adminMsgDone = 'pending';
-    toast('Заявка отправлена на проверку администратору');
-    renderQuests();
-    saveProfile();
-  });
-
-  $('questChannelOpenBtn').addEventListener('click', ()=>{
-    if(tg && tg.openTelegramLink){ tg.openTelegramLink(CHANNEL_URL); } else { window.open(CHANNEL_URL,'_blank'); }
-  });
-  $('questChannelCheckBtn').addEventListener('click', ()=>{
-    if(quests.channelDone){ toast('Заявка уже отправлена или награда получена'); return; }
-    quests.channelDone = 'pending';
-    toast('Заявка отправлена на проверку подписки');
-    renderQuests();
-    saveProfile();
-  });
-
-  function checkActivityQuests(){
-    renderQuests();
-  }
-
-  function claimActivityMilestone(games, coins, reward){
-    if(quests.activityClaimed.includes(games)) return;
-    if(stats.games < games || stats.totalEarned < coins) return;
-    quests.activityClaimed.push(games);
-    changeBalance(reward);
-    toast('Начислено ' + fmt(reward) + ' фишек за ступень «' + games + ' игр / ' + fmt(coins) + ' монет»');
-    renderQuests();
-    saveProfile();
-  }
-
-  function renderQuests(){
-    const adminRow = $('questAdminRow');
-    if(quests.adminMsgDone === true){
-      adminRow.innerHTML = '<div class="quest-done-tag">✓ Подтверждено, награда начислена</div>';
-    } else if(quests.adminMsgDone === 'pending'){
-      adminRow.innerHTML = '<div class="quest-progress-label" style="color:var(--gold);">⏳ На проверке у администратора</div>';
-    }
-    const channelRow = $('questChannelRow');
-    if(quests.channelDone === true){
-      channelRow.innerHTML = '<div class="quest-done-tag">✓ Подтверждено, награда начислена</div>';
-    } else if(quests.channelDone === 'pending'){
-      channelRow.innerHTML = '<div class="quest-progress-label" style="color:var(--gold);">⏳ Проверяется автоматически ботом</div>';
-    }
-    const list = $('questActivityList');
-    list.innerHTML = '';
-    ACTIVITY_MILESTONES.forEach((m,idx)=>{
-      const done = quests.activityClaimed.includes(m.games);
-      const prevDone = idx===0 || quests.activityClaimed.includes(ACTIVITY_MILESTONES[idx-1].games);
-      const reached = stats.games >= m.games && stats.totalEarned >= m.coins;
-      const gamesPct = Math.min(100, Math.round(stats.games/m.games*100));
-      const coinsPct = Math.min(100, Math.round(stats.totalEarned/m.coins*100));
-      const card = document.createElement('div');
-      card.className = 'quest-card ladder-step'+(done?' step-done':'')+(!prevDone && !done?' step-locked':'');
-      card.innerHTML =
-        '<div class="quest-top">'+
-          '<div class="quest-ic step-num">'+(done?'✓':m.step)+'</div>'+
-          '<div style="flex:1;">'+
-            '<div class="quest-title">Ступень '+m.step+' · '+m.games+' игр + '+fmt(m.coins)+' монет</div>'+
-            '<div class="quest-desc">Игры: '+Math.min(stats.games,m.games)+' / '+m.games+' · Накоплено: '+fmt(Math.min(stats.totalEarned,m.coins))+' / '+fmt(m.coins)+'</div>'+
-          '</div>'+
-          '<div class="quest-reward">+'+fmt(m.reward)+'</div>'+
-        '</div>'+
-        (done
-          ? '<div class="quest-done-tag">✓ Получено</div>'
-          : !prevDone
-            ? '<div class="quest-progress-label">🔒 Сначала пройди ступень '+m.step+'−1</div>'
-            : '<div class="quest-progress-track"><div class="quest-progress-fill" style="width:'+gamesPct+'%"></div></div>'+
-              '<div class="quest-progress-label">Игры '+gamesPct+'%</div>'+
-              '<div class="quest-progress-track" style="margin-top:6px;"><div class="quest-progress-fill" style="width:'+coinsPct+'%;background:var(--gold-grad);"></div></div>'+
-              '<div class="quest-progress-label">Монеты '+coinsPct+'%</div>'+
-              '<div class="quest-btn-row"><button class="quest-btn-primary" data-claim="'+m.games+'" data-coins="'+m.coins+'" data-reward="'+m.reward+'" '+(reached?'':'disabled')+'>'+(reached?'Забрать награду':'Ещё не достигнуто')+'</button></div>');
-      list.appendChild(card);
-    });
-    list.querySelectorAll('[data-claim]').forEach(btn=>{
-      btn.addEventListener('click', ()=> claimActivityMilestone(parseInt(btn.dataset.claim), parseInt(btn.dataset.coins), parseInt(btn.dataset.reward)));
-    });
-  }
-  renderQuests();
-
-  // ==================== SHOP ====================
-  const SHOP_ITEMS = [
-    {emoji:'🧸', name:'Мишка', price:100000},
-    {emoji:'🌸', name:'Цветок', price:300000},
-    {emoji:'🧸', name:'Мишка + Цветок', price:500000},
-  ];
-  const RECOVERY_ITEMS = [
-    {emoji:'', name:'Мишка', reward:50000},
-    {emoji:'🌸', name:'Цветок', reward:150000},
-    {emoji:'🧸🌸', name:'Мишка + Цветок', reward:300000},
-  ];
-
-  function renderShop(){
-    const list = $('shopList');
-    list.innerHTML = '';
-    SHOP_ITEMS.forEach(item=>{
-      const enough = balance >= item.price;
-      const card = document.createElement('div');
-      card.className = 'shop-card';
-      card.innerHTML =
-        '<div class="shop-emoji">'+item.emoji+'</div>'+
-        '<div class="shop-info">'+
-          '<div class="shop-name">'+item.name+'</div>'+
-          '<div class="shop-price">Нужно накопить: ◆'+fmt(item.price)+'</div>'+
-          '<button class="shop-btn" '+(enough?'':'disabled')+'>'+(enough?'Написать администратору':'Недостаточно фишек ('+fmt(balance)+' / '+fmt(item.price)+')')+'</button>'+
-        '</div>';
-      card.querySelector('button').addEventListener('click', ()=>{
-        if(!enough) return;
-        const url = 'https://t.me/'+ADMIN_USERNAME;
-        if(tg && tg.openTelegramLink){ tg.openTelegramLink(url); } else { window.open(url,'_blank'); }
-        toast('У вас накоплено '+fmt(item.price)+' — напишите администратору для получения подарка');
+    // Авто-синхронизация каждые 15 секунд (чтобы получать начисления админа)
+    setInterval(apiSync, 15000);
+
+    // Кнопка админки (5 кликов по меню или спец кнопка)
+    // В твоем HTML найди кнопку меню и добавь логику
+    let menuClicks = 0;
+    const menuBtn = $('menuBtn'); // Убедись что такой ID есть в HTML
+    if(menuBtn) {
+      menuBtn.addEventListener('click', () => {
+        menuClicks++;
+        setTimeout(() => menuClicks = 0, 2000);
+        if(menuClicks >= 5) {
+          const pass = prompt("Пароль администратора:");
+          if(pass) {
+            apiAdminLogin(pass).then(token => {
+              adminToken = token;
+              sessionStorage.setItem('jager_admin_token', token);
+              toast('🔓 Вход в админку выполнен');
+              openAdminPanel(); // Открываем панель
+            }).catch(() => toast('Неверный пароль'));
+          }
+          menuClicks = 0;
+        }
       });
-      list.appendChild(card);
-    });
-
-    const rlist = $('recoveryList');
-    rlist.innerHTML = '';
-    RECOVERY_ITEMS.forEach(item=>{
-      const card = document.createElement('div');
-      card.className = 'shop-card';
-      card.innerHTML =
-        '<div class="shop-emoji">'+item.emoji+'</div>'+
-        '<div class="shop-info">'+
-          '<div class="shop-name">'+item.name+'</div>'+
-          '<div class="shop-price">+◆'+fmt(item.reward)+' после проверки</div>'+
-          '<button class="shop-btn">Отправить подарок + скрин</button>'+
-        '</div>';
-      card.querySelector('button').addEventListener('click', ()=>{
-        const url = 'https://t.me/'+ADMIN_USERNAME;
-        if(tg && tg.openTelegramLink){ tg.openTelegramLink(url); } else { window.open(url,'_blank'); }
-        toast('Отправьте подарок и скриншот администратору — баланс начислят вручную');
-      });
-      rlist.appendChild(card);
-    });
-  }
-  renderShop();
-
-  // ==================== REFERRALS ====================
-  function renderReferrals(){
-    const botLink = 'https://t.me/jager_bot?start=ref_' + refData.code;
-    $('refLinkText').textContent = botLink;
-    $('refInvited').textContent = refData.invited;
-    $('refActive').textContent = refData.active;
-    $('refEarned').textContent = '◆'+fmt(refData.earned);
-    const note = document.querySelector('#screen-referrals .pvp-note');
-    if(note) note.textContent = 'Как это работает: твоя ссылка содержит start=ref_CODE. Когда новый пользователь открывает бота по ней, бот должен сохранить его ID → твой код. После выполнения условий активности сервер начисляет тебе награду. Один пользователь может быть привязан только к одному пригласившему.';
-  }
-  $('refCopyBtn').addEventListener('click', ()=>{
-    const text = $('refLinkText').textContent;
-    if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>toast('Ссылка скопирована')); }
-    else { toast('Скопируйте ссылку вручную: '+text); }
-  });
-  renderReferrals();
-
-  // ==================== PROFILE RENDER ====================
-  function renderProfile(){
-    $('statGames').textContent = stats.games;
-    $('statWins').textContent = stats.wins;
-    $('statLosses').textContent = stats.losses;
-    $('statWinrate').textContent = stats.games>0 ? Math.round(stats.wins/stats.games*100)+'%' : '0%';
-    $('statTotalWin').textContent = '◆'+fmt(stats.totalWin);
-    $('statTotalLose').textContent = '◆'+fmt(stats.totalLose);
-    $('statBestWin').textContent = '◆'+fmt(stats.bestWin);
-    $('statStreak').textContent = stats.streak;
-    if($('statWagered')) $('statWagered').textContent = '◆'+fmt(stats.totalWagered||0);
-
-    const rank = currentRank();
-    const nxt = nextRank();
-    $('profileRankBadge').textContent = rank.emoji+' '+rank.name;
-    $('topRankBadge').textContent = rank.emoji+' '+rank.name;
-    $('rankCurrentLabel').textContent = rank.emoji+' '+rank.name;
-    if(nxt){
-      $('rankNextLabel').textContent = 'до '+nxt.name+': ◆'+fmt(Math.max(0,nxt.min-stats.totalEarned));
-      const span = nxt.min - rank.min;
-      const progressed = Math.min(100, Math.max(0, (stats.totalEarned-rank.min)/span*100));
-      $('rankProgressFill').style.width = progressed+'%';
-    } else {
-      $('rankNextLabel').textContent = 'максимальный ранг';
-      $('rankProgressFill').style.width = '100%';
-    }
-  }
-  renderProfile();
-
-  // ==================== ADMIN PANEL ====================
-  const ADMIN_PASSWORD_PLAIN = 'jager-admin-2026'; 
-  let adminUnlocked = false;
-  let adminPollTimer = null;
-
-  function openAdminLogin(){
-    $('adminLoginOverlay').classList.add('show');
-    $('adminPasswordInput').value = '';
-    $('adminPasswordInput').focus();
-  }
-  $('adminLoginBtn').addEventListener('click', tryAdminLogin);
-  $('adminPasswordInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryAdminLogin(); });
-  function tryAdminLogin(){
-    const val = $('adminPasswordInput').value;
-    if(val === ADMIN_PASSWORD_PLAIN){
-      adminUnlocked = true;
-      $('adminLoginOverlay').classList.remove('show');
-      openAdminPanel();
-    } else {
-      toast('Неверный пароль');
     }
   }
 
-  function openAdminPanel(){
-    if(!adminUnlocked) return;
-    renderAdminPanel();
-    $('adminScreen').classList.add('show');
-    clearInterval(adminPollTimer);
-    if(API_BASE_URL){ adminPollTimer = setInterval(()=> renderAdminPlayers(currentAdminView), 5000); }
-  }
-  $('adminCloseBtn').addEventListener('click', ()=>{
-    $('adminScreen').classList.remove('show');
-    clearInterval(adminPollTimer);
-  });
-  $('adminLogoutBtn').addEventListener('click', ()=>{
-    adminUnlocked = false;
-    $('adminScreen').classList.remove('show');
-    clearInterval(adminPollTimer);
-    toast('Выход из админ-панели выполнен');
-  });
-
-  function getLocalProfiles(){
-    const out=[];
-    try{
-      for(let i=0;i<localStorage.length;i++){
-        const key=localStorage.key(i);
-        if(!key || !key.startsWith('jager_profile_')) continue;
-        const d=JSON.parse(localStorage.getItem(key));
-        out.push({key, balance:d.balance||0, stats:Object.assign(defaultStats(),d.stats||{}), refData:d.refData||{}});
-      }
-    }catch(e){}
-    if(!out.length) out.push({key:userKey,balance,stats:Object.assign(defaultStats(),stats),refData});
-    return out;
+  // Запуск
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 
-  let currentAdminView = 'players';
-
-  async function renderAdminPlayers(view='players'){
-    currentAdminView = view;
-
-    if(API_BASE_URL){
-      try{
-        const sortParam = view==='balance' ? 'balance' : (view==='games' ? 'games' : 'recent');
-        const res = await fetch(API_BASE_URL + '/api/admin/players?password=' + encodeURIComponent(ADMIN_PASSWORD_PLAIN) + '&sort=' + sortParam);
-        if(!res.ok) throw new Error('bad response');
-        const data = await res.json();
-        $('adminTotalPlayers').textContent = data.total_players;
-        $('adminOnlinePlayers').textContent = data.online_now;
-        $('adminTotalGames').textContent = data.total_games;
-        $('adminTotalWagered').textContent = '◆'+fmt(data.total_wagered);
-        let html = '<table class="admin-table"><thead><tr><th>#</th><th>Игрок</th><th>Сейчас</th><th>Баланс</th><th>Игр</th><th>Побед</th><th>Статус</th></tr></thead><tbody>';
-        data.players.forEach((p,i)=>{
-          html += '<tr><td>'+(i+1)+'</td>'+
-            '<td>'+(p.online?'<span class="admin-online-dot"></span>':'')+p.name+'</td>'+
-            '<td class="admin-muted">'+p.activity+'</td>'+
-            '<td>◆'+fmt(p.balance)+'</td><td>'+p.games+'</td><td>'+p.wins+'</td>'+
-            '<td>'+(p.banned?(' '+p.ban_note):'✅')+'</td></tr>';
-        });
-        html += '</tbody></table>';
-        $('adminPlayersTable').innerHTML = html;
-        return;
-      }catch(e){
-        $('adminPlayersTable').innerHTML = '<div class="admin-note">Сервер недоступен ('+API_BASE_URL+'). Проверь, что server.py запущен и адрес указан верно.</div>';
-        return;
-      }
-    }
-
-    const profiles=getLocalProfiles();
-    const totalGames=profiles.reduce((a,p)=>a+(p.stats.games||0),0);
-    const totalWagered=profiles.reduce((a,p)=>a+(p.stats.totalWagered||0),0);
-    $('adminTotalPlayers').textContent=profiles.length;
-    const online=profiles.filter(p=>p.stats.lastGameAt && Date.now()-p.stats.lastGameAt<90000).length;
-    $('adminOnlinePlayers').textContent=online;
-    $('adminTotalGames').textContent=totalGames;
-    $('adminTotalWagered').textContent='◆'+fmt(totalWagered);
-
-    let rows=[];
-    if(view==='balance') rows=[...profiles].sort((a,b)=>b.balance-a.balance);
-    else if(view==='games') rows=[...profiles].sort((a,b)=>(b.stats.games||0)-(a.stats.games||0));
-    else rows=profiles;
-    let html='<table class="admin-table"><thead><tr><th>#</th><th>Игрок</th><th>Баланс</th><th>Игр</th><th>Ставки</th><th>WR</th></tr></thead><tbody>';
-    rows.forEach((p,i)=>{
-      const id=p.key.replace('jager_profile_','');
-      const g=p.stats.games||0, w=p.stats.wins||0;
-      const wr=g?Math.round(w/g*100):0;
-      const on=p.stats.lastGameAt && Date.now()-p.stats.lastGameAt<90000;
-      html+='<tr><td>'+(i+1)+'</td><td>'+(on?'<span class="admin-online-dot"></span>':'')+id+'</td><td>◆'+fmt(p.balance)+'</td><td>'+g+'</td><td>◆'+fmt(p.stats.totalWagered||0)+'</td><td>'+wr+'%</td></tr>';
-    });
-    html+='</tbody></table>';
-    if(!API_BASE_URL){
-      html = '<div class="admin-note" style="margin-bottom:10px;">⚠️ Сервер не подключён (API_BASE_URL пустой) — показаны данные только этого устройства. Задеплой server.py и впиши адрес, чтобы видеть всех игроков.</div>' + html;
-    }
-    $('adminPlayersTable').innerHTML=html;
-  }
-
-  function renderAdminPanel(){
-    const q = $('adminQuestQueue');
-    q.innerHTML = '';
-    const pendingItems = [];
-    if(quests.adminMsgDone === 'pending') pendingItems.push({key:'adminMsgDone', label:'Сообщение администратору', reward:1000});
-    if(quests.channelDone === 'pending') pendingItems.push({key:'channelDone', label:'Подписка на канал', reward:3000});
-    if(pendingItems.length === 0){
-      q.innerHTML = '<div class="admin-note">Заявок на проверку нет</div>';
-    } else {
-      pendingItems.forEach(it=>{
-        const row = document.createElement('div'); row.className='admin-row';
-        row.innerHTML='<span>'+it.label+' (+'+fmt(it.reward)+')</span><button class="admin-approve-btn" data-key="'+it.key+'" data-reward="'+it.reward+'">Подтвердить</button>';
-        q.appendChild(row);
-      });
-      q.querySelectorAll('[data-key]').forEach(btn=>btn.addEventListener('click',()=>{
-        const key=btn.dataset.key, reward=parseInt(btn.dataset.reward);
-        quests[key]=true; changeBalance(reward); toast('Задание подтверждено, начислено '+fmt(reward));
-        renderQuests(); saveProfile(); renderAdminPanel();
-      }));
-    }
-
-    const s = $('adminStatsBlock');
-    s.innerHTML =
-      '<div class="admin-row"><span>ID</span><b>'+(tgUser?tgUser.id:'—')+'</b></div>'+ 
-      '<div class="admin-row"><span>Баланс</span><b>◆'+fmt(balance)+'</b></div>'+ 
-      '<div class="admin-row"><span>Игр сыграно</span><b>'+stats.games+'</b></div>'+ 
-      '<div class="admin-row"><span>Ставок на сумму</span><b>◆'+fmt(stats.totalWagered||0)+'</b></div>'+ 
-      '<div class="admin-row"><span>Победы / поражения</span><b>'+stats.wins+' / '+stats.losses+'</b></div>'+ 
-      '<div class="admin-row"><span>Win Rate</span><b>'+(stats.games>0?Math.round(stats.wins/stats.games*100):0)+'%</b></div>'+ 
-      '<div class="admin-row"><span>Лучший выигрыш</span><b>◆'+fmt(stats.bestWin)+'</b></div>'+ 
-      '<div class="admin-row"><span>Серия побед</span><b>'+stats.streak+'</b></div>';
-    renderAdminPlayers('players');
-    document.querySelectorAll('.admin-tab').forEach(tab=>{
-      tab.onclick=()=>{ document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active')); tab.classList.add('active'); renderAdminPlayers(tab.dataset.adminView); };
-    });
-  }
-
-  $('adminGiveBtn').addEventListener('click', async ()=>{
-    const target = $('adminGiveTarget').value.trim();
-    const amount = parseInt($('adminGiveAmount').value);
-    if(!amount || amount <= 0){ toast('Укажите сумму'); return; }
-
-    if(API_BASE_URL){
-      if(!target){ toast('Укажите имя игрока (как при регистрации)'); return; }
-      try{
-        const res = await fetch(API_BASE_URL + '/api/admin/give', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({password: ADMIN_PASSWORD_PLAIN, name: target, amount})
-        });
-        const data = await res.json().catch(()=>({}));
-        if(!res.ok) throw new Error(data.detail || 'Ошибка');
-        toast('Игроку '+target+' начислено ◆'+fmt(amount)+', новый баланс: ◆'+fmt(data.balance));
-        renderAdminPlayers(currentAdminView);
-      }catch(e){ toast('Не удалось начислить: '+e.message); }
-    } else {
-      changeBalance(amount);
-      toast('Начислено ◆'+fmt(amount)+' игроку '+(target||'(этот аккаунт)'));
-      renderAdminPanel();
-      renderProfile();
-    }
-    $('adminGiveTarget').value=''; $('adminGiveAmount').value='';
-  });
-
-  $('adminBanBtn').addEventListener('click', async ()=>{
-    const target = $('adminBanTarget').value.trim();
-    const minutes = parseInt($('adminBanMinutes').value);
-    if(!target){ toast('Укажите имя игрока'); return; }
-    if(isNaN(minutes)){ toast('Укажите минуты (0 = навсегда)'); return; }
-
-    if(API_BASE_URL){
-      try{
-        const res = await fetch(API_BASE_URL + '/api/admin/ban', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({password: ADMIN_PASSWORD_PLAIN, name: target, minutes})
-        });
-        if(!res.ok) throw new Error((await res.json().catch(()=>({}))).detail || 'Ошибка');
-        toast('Игрок '+target+' забанен'+(minutes===0?' навсегда':(' на '+minutes+' мин.')));
-        renderAdminPlayers(currentAdminView);
-      }catch(e){ toast('Не удалось забанить: '+e.message); }
-    } else {
-      toast('Бан без сервера не работает — задеплой server.py и впиши API_BASE_URL');
-    }
-  });
+  // Экспорт функций для кнопок в HTML (если нужно)
+  window.changeBalance = changeBalance;
+  window.recordGame = recordGame;
+  window.openAdminPanel = openAdminPanel;
 
 })();
 </script>
